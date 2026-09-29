@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+
+<AnchorPane prefHeight="550.0" prefWidth="750.0" styleClass="root" stylesheets="@/css/style.css" xmlns="http://javafx.com/dialogs" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.library.client.controller.LoginController">
+    <children>
+        <VBox alignment="CENTER" spacing="20.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+            <children>
+                <VBox alignment="CENTER" maxLineWidth="420.0" prefWidth="420.0" styleClass="card">
+                    <children>
+                        <Label text="HỆ THỐNG QUẢN LÝ THƯ VIỆN" textFill="#1e3c72">
+                            <font>
+                                <Font name="System Bold" size="22.0" />
+                            </font>
+                        </Label>
+                        <Label text="Mô hình Client - Server TCP Socket &amp; MySQL" textFill="#7f8c8d">
+                            <VBox.margin>
+                                <Insets bottom="20.0" top="5.0" />
+                            </VBox.margin>
+                        </Label>
+
+                        <!-- Server IP & Port -->
+                        <HBox spacing="10.0">
+                            <children>
+                                <VBox HBox.hgrow="ALWAYS">
+                                    <children>
+                                        <Label text="Máy chủ IP:" textFill="#34495e" />
+                                        <TextField fx:id="txtHost" text="localhost" />
+                                    </children>
+                                </VBox>
+                                <VBox prefWidth="100.0">
+                                    <children>
+                                        <Label text="Cổng:" textFill="#34495e" />
+                                        <TextField fx:id="txtPort" text="8888" />
+                                    </children>
+                                </VBox>
+                            </children>
+                            <VBox.margin>
+                                <Insets bottom="15.0" />
+                            </VBox.margin>
+                        </HBox>
+
+                        <VBox spacing="5.0">
+                            <children>
+                                <Label text="Tên đăng nhập:" textFill="#34495e" />
+                                <TextField fx:id="txtUsername" promptText="admin hoặc staff" text="admin" />
+                            </children>
+                            <VBox.margin>
+                                <Insets bottom="10.0" />
+                            </VBox.margin>
+                        </VBox>
+
+                        <VBox spacing="5.0">
+                            <children>
+                                <Label text="Mật khẩu:" textFill="#34495e" />
+                                <PasswordField fx:id="txtPassword" promptText="Mật khẩu" text="admin123" />
+                            </children>
+                            <VBox.margin>
+                                <Insets bottom="15.0" />
+                            </VBox.margin>
+                        </VBox>
+
+                        <Label fx:id="lblError" textFill="#e74c3c" wrapText="true">
+                            <VBox.margin>
+                                <Insets bottom="10.0" />
+                            </VBox.margin>
+                        </Label>
+
+                        <Button fx:id="btnLogin" maxWidth="Infinity" onAction="#handleLogin" styleClass="btn-primary" text="ĐĂNG NHẬP" />
+                    </children>
+                    <padding>
+                        <Insets bottom="30.0" left="30.0" right="30.0" top="30.0" />
+                    </padding>
+                </VBox>
+            </children>
+        </VBox>
+    </children>
+</AnchorPane>
