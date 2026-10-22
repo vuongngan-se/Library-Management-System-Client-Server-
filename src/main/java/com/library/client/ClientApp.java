@@ -13,9 +13,11 @@ public class ClientApp extends Application {
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/library/client/views/LoginView.fxml"));
         Parent root = loader.load();
 
-        primaryStage.setTitle("Quản Lý Thư Viện - Đăng Nhập");
-        primaryStage.setScene(new Scene(root, 750, 520));
-        primaryStage.setResizable(false);
+        primaryStage.setTitle("Quản Lý Thư Viện - Đăng Nhập & Đăng Ký");
+        primaryStage.setScene(new Scene(root, 760, 620));
+        primaryStage.setResizable(true);
+        primaryStage.setMinWidth(680);
+        primaryStage.setMinHeight(520);
         primaryStage.show();
     }
 

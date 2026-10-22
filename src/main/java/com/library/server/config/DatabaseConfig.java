@@ -11,6 +11,22 @@ public class DatabaseConfig {
     private static boolean inMemoryMode = false;
 
     public static void init(String url, String user, String password) {
+        if (tryInit(url, user, password)) {
+            return;
+        }
+        // If password was provided but failed, also try empty password ""
+        if (password != null && !password.isEmpty()) {
+            System.out.println("Thử kết nối MySQL với mật khẩu trống (empty password)...");
+            if (tryInit(url, user, "")) {
+                return;
+            }
+        }
+        System.err.println("Không thể kết nối cơ sở dữ liệu MySQL. Chuyển sang chế độ In-Memory Mode.");
+        inMemoryMode = true;
+    }
+
+    private static boolean tryInit(String url, String user, String password) {
+        HikariDataSource ds = null;
         try {
             HikariConfig config = new HikariConfig();
             config.setJdbcUrl(url);
@@ -22,14 +38,21 @@ public class DatabaseConfig {
             config.setIdleTimeout(30000);
             config.setConnectionTimeout(3000);
 
-            dataSource = new HikariDataSource(config);
-            // Test connection
-            try (Connection conn = dataSource.getConnection()) {
-                System.out.println("MySQL database connected successfully.");
+            ds = new HikariDataSource(config);
+            try (Connection conn = ds.getConnection()) {
+                System.out.println("Kết nối cơ sở dữ liệu MySQL thành công (user: " + user + ").");
+                dataSource = ds;
+                inMemoryMode = false;
+                return true;
             }
         } catch (Exception e) {
-            System.err.println("Failed to connect to MySQL database (" + e.getMessage() + "). Falling back to memory mode for server logic.");
-            inMemoryMode = true;
+            System.err.println("Kết nối MySQL thất bại: " + e.getMessage());
+            if (ds != null) {
+                try {
+                    ds.close();
+                } catch (Exception ignored) {}
+            }
+            return false;
         }
     }
 

@@ -33,6 +33,7 @@
                 <Button fx:id="btnNavBooks" maxWidth="1.7976931348623157E308" onAction="#showBooks" styleClass="sidebar-btn" text="📖 Quản lý Sách" />
                 <Button fx:id="btnNavReaders" maxWidth="1.7976931348623157E308" onAction="#showReaders" styleClass="sidebar-btn" text="🎴 Quản lý Độc giả" />
                 <Button fx:id="btnNavBorrow" maxWidth="1.7976931348623157E308" onAction="#showBorrow" styleClass="sidebar-btn" text="🔄 Mượn &amp; Trả sách" />
+                <Button fx:id="btnNavFines" maxWidth="1.7976931348623157E308" onAction="#showFines" styleClass="sidebar-btn" text="💰 Quản lý Tiền phạt" />
             </children>
         </VBox>
     </left>
@@ -56,7 +57,7 @@
                             <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
                         </columnConstraints>
                         <rowConstraints>
-                            <RowConstraints minWidth="10.0" prefHeight="110.0" vgrow="SOMETIMES" />
+                            <RowConstraints minHeight="10.0" prefHeight="110.0" vgrow="SOMETIMES" />
                         </rowConstraints>
                         <children>
                             <VBox styleClass="metric-card, metric-card-blue" GridPane.columnIndex="0">
@@ -266,6 +267,7 @@
                                             </font>
                                         </Label>
                                         <Region HBox.hgrow="ALWAYS" />
+                                        <Button onAction="#handleRenewSelectedBorrowing" styleClass="btn-info" text="Gia hạn (+7 ngày)" />
                                         <Button onAction="#handleReturnSelectedBorrowing" styleClass="btn-primary" text="Trả sách đã chọn" />
                                     </children>
                                 </HBox>
@@ -276,11 +278,41 @@
                                         <TableColumn fx:id="colBorrowDate" prefWidth="110.0" text="Ngày mượn" />
                                         <TableColumn fx:id="colBorrowDue" prefWidth="110.0" text="Hạn trả" />
                                         <TableColumn fx:id="colBorrowStatus" prefWidth="100.0" text="Trạng thái" />
+                                        <TableColumn fx:id="colBorrowFine" prefWidth="100.0" text="Tiền phạt" />
                                     </columns>
                                 </TableView>
                             </children>
                         </VBox>
                     </HBox>
+                </children>
+            </VBox>
+
+            <!-- Fines View -->
+            <VBox fx:id="viewFines" spacing="20.0" visible="false">
+                <children>
+                    <HBox alignment="CENTER_LEFT" spacing="15.0">
+                        <children>
+                            <Label text="Quản lý Tiền phạt &amp; Vi phạm" textFill="#2c3e50">
+                                <font>
+                                    <Font name="System Bold" size="20.0" />
+                                </font>
+                            </Label>
+                            <Region HBox.hgrow="ALWAYS" />
+                            <Button onAction="#handleRefreshFines" styleClass="btn-secondary" text="🔄 Làm mới" />
+                            <Button onAction="#handlePaySelectedFine" styleClass="btn-success" text="💵 Thu tiền phạt" />
+                        </children>
+                    </HBox>
+                    <TableView fx:id="tblFines" VBox.vgrow="ALWAYS">
+                        <columns>
+                            <TableColumn fx:id="colFineId" prefWidth="70.0" text="Mã phạt" />
+                            <TableColumn fx:id="colFineBorrowId" prefWidth="90.0" text="Mã mượn" />
+                            <TableColumn fx:id="colFineReader" prefWidth="170.0" text="Độc giả" />
+                            <TableColumn fx:id="colFineAmount" prefWidth="120.0" text="Số tiền phạt" />
+                            <TableColumn fx:id="colFineStatus" prefWidth="110.0" text="Trạng thái" />
+                            <TableColumn fx:id="colFineReason" prefWidth="300.0" text="Lý do vi phạm" />
+                            <TableColumn fx:id="colFineDate" prefWidth="150.0" text="Ngày tạo" />
+                        </columns>
+                    </TableView>
                 </children>
             </VBox>
         </StackPane>

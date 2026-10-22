@@ -1,11 +1,8 @@
 package com.library.server.service;
 
 import com.library.common.model.Book;
-import com.library.common.model.Reader;
-import com.library.common.model.User;
 import com.library.common.protocol.Request;
 import com.library.common.protocol.Response;
-import com.library.server.dao.InMemoryStore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -37,6 +34,11 @@ public class LibraryServiceTest {
         Response res = service.handleRequest(req);
         assertEquals("SUCCESS", res.getStatus());
         assertNotNull(res.getData());
+
+        // Test second consecutive login (checks password is not wiped in memory)
+        Response res2 = service.handleRequest(req);
+        assertEquals("SUCCESS", res2.getStatus());
+        assertNotNull(res2.getData());
     }
 
     @Test
@@ -113,4 +115,68 @@ public class LibraryServiceTest {
         assertEquals("SUCCESS", res.getStatus());
         assertNotNull(res.getData());
     }
+
+    @Test
+    @DisplayName("Test User Registration Success & Login")
+    public void testRegisterSuccess() {
+        String testUser = "testuser_" + System.currentTimeMillis();
+        Map<String, String> regData = new HashMap<>();
+        regData.put("fullName", "Người Dùng Thử Nghiệm");
+        regData.put("username", testUser);
+        regData.put("password", "pass1234");
+        regData.put("role", "STAFF");
+
+        Request regReq = new Request("REGISTER", regData);
+        Response regRes = service.handleRequest(regReq);
+        assertEquals("SUCCESS", regRes.getStatus());
+
+        // Attempt duplicate register
+        Response dupRes = service.handleRequest(regReq);
+        assertEquals("ERROR", dupRes.getStatus());
+
+        // Login with newly registered user
+        Map<String, String> loginData = new HashMap<>();
+        loginData.put("username", testUser);
+        loginData.put("password", "pass1234");
+        Request loginReq = new Request("LOGIN", loginData);
+        Response loginRes = service.handleRequest(loginReq);
+        assertEquals("SUCCESS", loginRes.getStatus());
+    }
+
+    @Test
+    @DisplayName("Test User Registration Validation")
+    public void testRegisterValidation() {
+        // Missing fields
+        Map<String, String> regData = new HashMap<>();
+        regData.put("username", "ab");
+        regData.put("password", "123");
+        Request regReq = new Request("REGISTER", regData);
+        Response res = service.handleRequest(regReq);
+        assertEquals("ERROR", res.getStatus());
+    }
+
+    @Test
+    @DisplayName("Test Get Fines and Pay Fine")
+    public void testGetFinesAndPayFine() {
+        Request req = new Request("GET_FINES", null);
+        Response res = service.handleRequest(req);
+        assertEquals("SUCCESS", res.getStatus());
+        assertTrue(res.getData() instanceof List);
+
+        Request payReq = new Request("PAY_FINE", 1);
+        Response payRes = service.handleRequest(payReq);
+        assertEquals("SUCCESS", payRes.getStatus());
+    }
+
+    @Test
+    @DisplayName("Test Renew Borrowing")
+    public void testRenewBorrowing() {
+        Map<String, Object> renewData = new HashMap<>();
+        renewData.put("borrowingId", 501);
+        renewData.put("extraDays", 7);
+        Request renewReq = new Request("RENEW_BORROWING", renewData);
+        Response renewRes = service.handleRequest(renewReq);
+        assertEquals("SUCCESS", renewRes.getStatus());
+    }
 }
+

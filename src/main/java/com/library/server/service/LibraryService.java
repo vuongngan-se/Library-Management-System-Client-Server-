@@ -31,6 +31,8 @@ public class LibraryService {
             switch (action) {
                 case "LOGIN":
                     return handleLogin(data);
+                case "REGISTER":
+                    return handleRegister(data);
                 case "GET_BOOKS":
                     return Response.success("Lấy danh sách sách thành công", InMemoryStore.getAllBooks());
                 case "SEARCH_BOOKS":
@@ -51,8 +53,14 @@ public class LibraryService {
                     return handleBorrowBooks(data);
                 case "RETURN_BOOKS":
                     return handleReturnBooks(data);
+                case "RENEW_BORROWING":
+                    return handleRenewBorrowing(data);
                 case "GET_BORROWINGS":
-                    return Response.success("Lấy lịch sử mượn trả thành công", new ArrayList<>(borrowingsStore.values()));
+                    return Response.success("Lấy lịch sử mượn trả thành công", InMemoryStore.getAllBorrowings());
+                case "GET_FINES":
+                    return Response.success("Lấy danh sách phiếu phạt thành công", InMemoryStore.getAllFines());
+                case "PAY_FINE":
+                    return handlePayFine(data);
                 case "GET_STATS":
                     return handleGetStats();
                 default:
@@ -74,11 +82,63 @@ public class LibraryService {
         }
 
         User user = InMemoryStore.findUserByUsername(username);
-        if (user != null && user.getPassword() != null && user.getPassword().equals(password)) {
-            user.setPassword(null); // security strip
-            return Response.success("Đăng nhập thành công", user);
+        if (user != null && user.getPassword() != null) {
+            boolean matches = user.getPassword().equals(password);
+            if (!matches && user.getPassword().startsWith("$2a$")) {
+                try {
+                    matches = org.mindrot.jbcrypt.BCrypt.checkpw(password, user.getPassword());
+                } catch (Exception ignored) {}
+            }
+            if (matches) {
+                User safeUser = new User(
+                        user.getUserId(),
+                        user.getUsername(),
+                        null,
+                        user.getFullName(),
+                        user.getRole(),
+                        user.getStatus()
+                );
+                return Response.success("Đăng nhập thành công", safeUser);
+            }
         }
         return Response.error("Tài khoản hoặc mật khẩu không chính xác.");
+    }
+
+    private Response handleRegister(Object data) {
+        if (data == null) {
+            return Response.error("Dữ liệu đăng ký không hợp lệ.");
+        }
+        Map<?, ?> map = mapper.convertValue(data, Map.class);
+        String username = map.get("username") != null ? map.get("username").toString().trim() : null;
+        String password = map.get("password") != null ? map.get("password").toString() : null;
+        String fullName = map.get("fullName") != null ? map.get("fullName").toString().trim() : null;
+        String role = map.get("role") != null ? map.get("role").toString().trim() : "STAFF";
+
+        if (username == null || username.isEmpty() || password == null || password.isEmpty() || fullName == null || fullName.isEmpty()) {
+            return Response.error("Vui lòng điền đầy đủ họ tên, tên đăng nhập và mật khẩu.");
+        }
+
+        if (username.length() < 3) {
+            return Response.error("Tên đăng nhập phải có ít nhất 3 ký tự.");
+        }
+
+        if (password.length() < 6) {
+            return Response.error("Mật khẩu phải có ít nhất 6 ký tự.");
+        }
+
+        // Check if username already exists
+        User existing = InMemoryStore.findUserByUsername(username);
+        if (existing != null) {
+            return Response.error("Tên đăng nhập '" + username + "' đã được sử dụng. Vui lòng chọn tên khác.");
+        }
+
+        User newUser = new User(0, username, password, fullName, role, "ACTIVE");
+        boolean ok = InMemoryStore.registerUser(newUser);
+        if (ok) {
+            User safeUser = new User(newUser.getUserId(), newUser.getUsername(), null, newUser.getFullName(), newUser.getRole(), newUser.getStatus());
+            return Response.success("Đăng ký tài khoản thành công!", safeUser);
+        }
+        return Response.error("Đăng ký tài khoản thất bại do lỗi hệ thống.");
     }
 
     private Response handleSearchBooks(Object data) {
@@ -190,6 +250,7 @@ public class LibraryService {
             details.add(bd);
         }
         borrowing.setDetails(details);
+        InMemoryStore.saveBorrowing(borrowing);
         borrowingsStore.put(borrowing.getBorrowingId(), borrowing);
 
         return Response.success("Tạo phiếu mượn sách thành công", borrowing);
@@ -199,7 +260,10 @@ public class LibraryService {
         Map<?, ?> map = mapper.convertValue(data, Map.class);
         int borrowingId = Integer.parseInt(map.get("borrowingId").toString());
 
-        Borrowing b = borrowingsStore.get(borrowingId);
+        Borrowing b = InMemoryStore.findBorrowingById(borrowingId);
+        if (b == null) {
+            b = borrowingsStore.get(borrowingId);
+        }
         if (b == null) {
             return Response.error("Không tìm thấy mã phiếu mượn: " + borrowingId);
         }
@@ -208,8 +272,32 @@ public class LibraryService {
             return Response.error("Phiếu mượn này đã được trả trước đó.");
         }
 
+        LocalDate now = LocalDate.now();
         b.setStatus("RETURNED");
-        b.setReturnDate(LocalDate.now().toString());
+        b.setReturnDate(now.toString());
+
+        // Check if overdue and calculate fine
+        if (b.getDueDate() != null) {
+            try {
+                LocalDate dueDate = LocalDate.parse(b.getDueDate());
+                if (now.isAfter(dueDate)) {
+                    long overdueDays = java.time.temporal.ChronoUnit.DAYS.between(dueDate, now);
+                    if (overdueDays > 0) {
+                        double fineAmount = overdueDays * 5000.0;
+                        b.setFineAmount(fineAmount);
+                        Fine fine = new Fine(
+                                0,
+                                borrowingId,
+                                fineAmount,
+                                "UNPAID",
+                                "Trễ hạn " + overdueDays + " ngày khi trả sách",
+                                now.toString()
+                        );
+                        InMemoryStore.saveFine(fine);
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
 
         // Restore quantity
         List<Book> allBooks = InMemoryStore.getAllBooks();
@@ -225,13 +313,65 @@ public class LibraryService {
             }
         }
 
+        InMemoryStore.updateBorrowing(b);
+        borrowingsStore.put(borrowingId, b);
+
         return Response.success("Xử lý trả sách thành công", b);
+    }
+
+    private Response handleRenewBorrowing(Object data) {
+        if (data == null) {
+            return Response.error("Dữ liệu gia hạn không hợp lệ.");
+        }
+        Map<?, ?> map = mapper.convertValue(data, Map.class);
+        int borrowingId = Integer.parseInt(map.get("borrowingId").toString());
+        int extraDays = map.containsKey("extraDays") ? Integer.parseInt(map.get("extraDays").toString()) : 7;
+
+        Borrowing b = InMemoryStore.findBorrowingById(borrowingId);
+        if (b == null) {
+            b = borrowingsStore.get(borrowingId);
+        }
+        if (b == null) {
+            return Response.error("Không tìm thấy phiếu mượn #" + borrowingId);
+        }
+        if (!"BORROWED".equals(b.getStatus())) {
+            return Response.error("Chỉ có thể gia hạn phiếu mượn đang trong trạng thái 'Đang mượn'.");
+        }
+
+        boolean ok = InMemoryStore.renewBorrowing(borrowingId, extraDays);
+        if (ok) {
+            Borrowing updated = InMemoryStore.findBorrowingById(borrowingId);
+            return Response.success("Gia hạn mượn sách thành công! Hạn trả mới: " + (updated != null ? updated.getDueDate() : ""), updated);
+        }
+        return Response.error("Không thể gia hạn phiếu mượn.");
+    }
+
+    private Response handlePayFine(Object data) {
+        int fineId = 0;
+        if (data instanceof Integer) {
+            fineId = (Integer) data;
+        } else if (data instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) data;
+            fineId = Integer.parseInt(map.get("fineId").toString());
+        } else if (data != null) {
+            fineId = Integer.parseInt(data.toString());
+        }
+
+        if (fineId <= 0) {
+            return Response.error("Mã phiếu phạt không hợp lệ.");
+        }
+
+        boolean ok = InMemoryStore.payFine(fineId);
+        if (ok) {
+            return Response.success("Thu tiền phạt thành công!", fineId);
+        }
+        return Response.error("Không thể cập nhật trạng thái phiếu phạt.");
     }
 
     private Response handleGetStats() {
         List<Book> books = InMemoryStore.getAllBooks();
         List<Reader> readers = InMemoryStore.getAllReaders();
-        List<Borrowing> borrowings = new ArrayList<>(borrowingsStore.values());
+        List<Borrowing> borrowings = InMemoryStore.getAllBorrowings();
 
         int totalBooks = books.stream().mapToInt(Book::getQuantity).sum();
         int availableBooks = books.stream().mapToInt(Book::getAvailableQuantity).sum();
@@ -240,7 +380,9 @@ public class LibraryService {
         LocalDate now = LocalDate.now();
 
         for (Borrowing b : borrowings) {
-            if ("BORROWED".equals(b.getStatus()) && b.getDueDate() != null) {
+            if ("OVERDUE".equals(b.getStatus())) {
+                overdueCount++;
+            } else if ("BORROWED".equals(b.getStatus()) && b.getDueDate() != null) {
                 try {
                     LocalDate due = LocalDate.parse(b.getDueDate());
                     if (now.isAfter(due)) overdueCount++;

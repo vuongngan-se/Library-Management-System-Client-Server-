@@ -5,12 +5,13 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.Font?>
 
-<AnchorPane prefHeight="550.0" prefWidth="750.0" styleClass="root" stylesheets="@/css/style.css" xmlns="http://javafx.com/dialogs" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.library.client.controller.LoginController">
+<AnchorPane prefHeight="640.0" prefWidth="780.0" styleClass="root" stylesheets="@/css/style.css" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.library.client.controller.LoginController">
     <children>
-        <VBox alignment="CENTER" spacing="20.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+        <VBox alignment="CENTER" spacing="15.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
             <children>
-                <VBox alignment="CENTER" maxLineWidth="420.0" prefWidth="420.0" styleClass="card">
+                <VBox alignment="CENTER" maxWidth="450.0" prefWidth="450.0" styleClass="card">
                     <children>
+                        <!-- Header Title -->
                         <Label text="HỆ THỐNG QUẢN LÝ THƯ VIỆN" textFill="#1e3c72">
                             <font>
                                 <Font name="System Bold" size="22.0" />
@@ -18,11 +19,11 @@
                         </Label>
                         <Label text="Mô hình Client - Server TCP Socket &amp; MySQL" textFill="#7f8c8d">
                             <VBox.margin>
-                                <Insets bottom="20.0" top="5.0" />
+                                <Insets bottom="15.0" top="5.0" />
                             </VBox.margin>
                         </Label>
 
-                        <!-- Server IP & Port -->
+                        <!-- Server Host & Port Configuration -->
                         <HBox spacing="10.0">
                             <children>
                                 <VBox HBox.hgrow="ALWAYS">
@@ -43,36 +44,110 @@
                             </VBox.margin>
                         </HBox>
 
-                        <VBox spacing="5.0">
+                        <!-- Auth Switch Tabs (Login / Register) -->
+                        <HBox alignment="CENTER" styleClass="auth-switch-bar">
                             <children>
-                                <Label text="Tên đăng nhập:" textFill="#34495e" />
-                                <TextField fx:id="txtUsername" promptText="admin hoặc staff" text="admin" />
-                            </children>
-                            <VBox.margin>
-                                <Insets bottom="10.0" />
-                            </VBox.margin>
-                        </VBox>
-
-                        <VBox spacing="5.0">
-                            <children>
-                                <Label text="Mật khẩu:" textFill="#34495e" />
-                                <PasswordField fx:id="txtPassword" promptText="Mật khẩu" text="admin123" />
+                                <Button fx:id="btnSwitchLogin" maxWidth="Infinity" onAction="#showLoginForm" styleClass="auth-tab-btn, auth-tab-btn-active" text="ĐĂNG NHẬP" HBox.hgrow="ALWAYS" />
+                                <Button fx:id="btnSwitchRegister" maxWidth="Infinity" onAction="#showRegisterForm" styleClass="auth-tab-btn" text="ĐĂNG KÝ TÀI KHOẢN" HBox.hgrow="ALWAYS" />
                             </children>
                             <VBox.margin>
                                 <Insets bottom="15.0" />
                             </VBox.margin>
+                        </HBox>
+
+                        <!-- FORM 1: LOGIN FORM -->
+                        <VBox fx:id="vboxLogin" spacing="12.0">
+                            <children>
+                                <VBox spacing="5.0">
+                                    <children>
+                                        <Label text="Tên đăng nhập:" textFill="#34495e" />
+                                        <TextField fx:id="txtUsername" promptText="admin hoặc staff" text="admin" />
+                                    </children>
+                                </VBox>
+
+                                <VBox spacing="5.0">
+                                    <children>
+                                        <Label text="Mật khẩu:" textFill="#34495e" />
+                                        <PasswordField fx:id="txtPassword" promptText="Mật khẩu" text="admin123" />
+                                    </children>
+                                </VBox>
+
+                                <Button fx:id="btnLogin" maxWidth="Infinity" onAction="#handleLogin" styleClass="btn-primary" text="ĐĂNG NHẬP">
+                                    <VBox.margin>
+                                        <Insets top="5.0" />
+                                    </VBox.margin>
+                                </Button>
+
+                                <HBox alignment="CENTER">
+                                    <children>
+                                        <Label text="Chưa có tài khoản?" textFill="#7f8c8d" />
+                                        <Button onAction="#showRegisterForm" styleClass="btn-link" text="Đăng ký ngay" />
+                                    </children>
+                                    <VBox.margin>
+                                        <Insets top="5.0" />
+                                    </VBox.margin>
+                                </HBox>
+                            </children>
                         </VBox>
 
-                        <Label fx:id="lblError" textFill="#e74c3c" wrapText="true">
+                        <!-- FORM 2: REGISTER FORM -->
+                        <VBox fx:id="vboxRegister" managed="false" spacing="10.0" visible="false">
+                            <children>
+                                <VBox spacing="5.0">
+                                    <children>
+                                        <Label text="Họ và tên:" textFill="#34495e" />
+                                        <TextField fx:id="txtRegFullName" promptText="VD: Nguyễn Văn A" />
+                                    </children>
+                                </VBox>
+
+                                <VBox spacing="5.0">
+                                    <children>
+                                        <Label text="Tên đăng nhập:" textFill="#34495e" />
+                                        <TextField fx:id="txtRegUsername" promptText="Tối thiểu 3 ký tự (VD: thuthu1)" />
+                                    </children>
+                                </VBox>
+
+                                <VBox spacing="5.0">
+                                    <children>
+                                        <Label text="Mật khẩu:" textFill="#34495e" />
+                                        <PasswordField fx:id="txtRegPassword" promptText="Tối thiểu 6 ký tự" />
+                                    </children>
+                                </VBox>
+
+                                <VBox spacing="5.0">
+                                    <children>
+                                        <Label text="Xác nhận mật khẩu:" textFill="#34495e" />
+                                        <PasswordField fx:id="txtRegConfirmPassword" promptText="Nhập lại mật khẩu" />
+                                    </children>
+                                </VBox>
+
+                                <Button fx:id="btnRegister" maxWidth="Infinity" onAction="#handleRegister" styleClass="btn-success" text="TẠO TÀI KHOẢN">
+                                    <VBox.margin>
+                                        <Insets top="5.0" />
+                                    </VBox.margin>
+                                </Button>
+
+                                <HBox alignment="CENTER">
+                                    <children>
+                                        <Label text="Đã có tài khoản?" textFill="#7f8c8d" />
+                                        <Button onAction="#showLoginForm" styleClass="btn-link" text="Quay lại Đăng nhập" />
+                                    </children>
+                                    <VBox.margin>
+                                        <Insets top="5.0" />
+                                    </VBox.margin>
+                                </HBox>
+                            </children>
+                        </VBox>
+
+                        <!-- Error / Status Message -->
+                        <Label fx:id="lblError" alignment="CENTER" maxWidth="Infinity" textFill="#e74c3c" wrapText="true">
                             <VBox.margin>
-                                <Insets bottom="10.0" />
+                                <Insets top="10.0" />
                             </VBox.margin>
                         </Label>
-
-                        <Button fx:id="btnLogin" maxWidth="Infinity" onAction="#handleLogin" styleClass="btn-primary" text="ĐĂNG NHẬP" />
                     </children>
                     <padding>
-                        <Insets bottom="30.0" left="30.0" right="30.0" top="30.0" />
+                        <Insets bottom="25.0" left="30.0" right="30.0" top="25.0" />
                     </padding>
                 </VBox>
             </children>

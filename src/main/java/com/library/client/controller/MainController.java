@@ -4,12 +4,12 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.library.client.net.SocketClient;
 import com.library.common.model.Book;
 import com.library.common.model.Borrowing;
+import com.library.common.model.Fine;
 import com.library.common.model.Reader;
 import com.library.common.model.User;
 import com.library.common.protocol.Request;
 import com.library.common.protocol.Response;
 import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -34,12 +34,14 @@ public class MainController {
     @FXML private Button btnNavBooks;
     @FXML private Button btnNavReaders;
     @FXML private Button btnNavBorrow;
+    @FXML private Button btnNavFines;
 
     // Views
     @FXML private VBox viewDashboard;
     @FXML private VBox viewBooks;
     @FXML private VBox viewReaders;
     @FXML private VBox viewBorrow;
+    @FXML private VBox viewFines;
 
     // Dashboard Metrics
     @FXML private Label lblStatTotalBooks;
@@ -93,6 +95,17 @@ public class MainController {
     @FXML private TableColumn<Borrowing, String> colBorrowDate;
     @FXML private TableColumn<Borrowing, String> colBorrowDue;
     @FXML private TableColumn<Borrowing, String> colBorrowStatus;
+    @FXML private TableColumn<Borrowing, Double> colBorrowFine;
+
+    // Fines Module
+    @FXML private TableView<Fine> tblFines;
+    @FXML private TableColumn<Fine, Integer> colFineId;
+    @FXML private TableColumn<Fine, Integer> colFineBorrowId;
+    @FXML private TableColumn<Fine, String> colFineReader;
+    @FXML private TableColumn<Fine, Double> colFineAmount;
+    @FXML private TableColumn<Fine, String> colFineStatus;
+    @FXML private TableColumn<Fine, String> colFineReason;
+    @FXML private TableColumn<Fine, String> colFineDate;
 
     private Book selectedBook;
     private Reader selectedReader;
@@ -155,6 +168,16 @@ public class MainController {
         colBorrowDate.setCellValueFactory(new PropertyValueFactory<>("borrowDate"));
         colBorrowDue.setCellValueFactory(new PropertyValueFactory<>("dueDate"));
         colBorrowStatus.setCellValueFactory(new PropertyValueFactory<>("status"));
+        colBorrowFine.setCellValueFactory(new PropertyValueFactory<>("fineAmount"));
+
+        // Fines
+        colFineId.setCellValueFactory(new PropertyValueFactory<>("fineId"));
+        colFineBorrowId.setCellValueFactory(new PropertyValueFactory<>("borrowingId"));
+        colFineReader.setCellValueFactory(new PropertyValueFactory<>("readerName"));
+        colFineAmount.setCellValueFactory(new PropertyValueFactory<>("amount"));
+        colFineStatus.setCellValueFactory(new PropertyValueFactory<>("status"));
+        colFineReason.setCellValueFactory(new PropertyValueFactory<>("reason"));
+        colFineDate.setCellValueFactory(new PropertyValueFactory<>("createdAt"));
     }
 
     private void setActiveNav(Button activeButton, VBox activeView) {
@@ -162,6 +185,7 @@ public class MainController {
         btnNavBooks.getStyleClass().remove("sidebar-btn-active");
         btnNavReaders.getStyleClass().remove("sidebar-btn-active");
         btnNavBorrow.getStyleClass().remove("sidebar-btn-active");
+        btnNavFines.getStyleClass().remove("sidebar-btn-active");
 
         activeButton.getStyleClass().add("sidebar-btn-active");
 
@@ -169,6 +193,7 @@ public class MainController {
         viewBooks.setVisible(false);
         viewReaders.setVisible(false);
         viewBorrow.setVisible(false);
+        viewFines.setVisible(false);
 
         activeView.setVisible(true);
     }
@@ -195,6 +220,12 @@ public class MainController {
     public void showBorrow() {
         setActiveNav(btnNavBorrow, viewBorrow);
         loadBorrowingsData();
+    }
+
+    @FXML
+    public void showFines() {
+        setActiveNav(btnNavFines, viewFines);
+        loadFinesData();
     }
 
     private void loadDashboardData() {
@@ -500,7 +531,13 @@ public class MainController {
 
             Response resp = socketClient.sendRequest(new Request("RETURN_BOOKS", reqData));
             if ("SUCCESS".equals(resp.getStatus())) {
-                showAlert("Thành công", "Xử lý trả sách thành công!");
+                Borrowing returned = socketClient.convertData(resp.getData(), Borrowing.class);
+                if (returned != null && returned.getFineAmount() > 0) {
+                    showAlert("Thông báo phạt quá hạn", "Trả sách thành công! Độc giả bị phạt " +
+                            String.format("%,.0f VNĐ", returned.getFineAmount()) + " do quá hạn nộp sách. Vui lòng kiểm tra tab Tiền phạt.");
+                } else {
+                    showAlert("Thành công", "Xử lý trả sách thành công!");
+                }
                 loadBorrowingsData();
             } else {
                 showAlert("Lỗi", resp.getMessage());
@@ -511,14 +548,101 @@ public class MainController {
     }
 
     @FXML
+    public void handleRenewSelectedBorrowing() {
+        Borrowing selected = tblBorrowings.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            showAlert("Thông báo", "Vui lòng chọn phiếu mượn cần gia hạn.");
+            return;
+        }
+
+        if (!"BORROWED".equals(selected.getStatus())) {
+            showAlert("Cảnh báo", "Chỉ có thể gia hạn phiếu mượn đang trong trạng thái 'Đang mượn' (BORROWED).");
+            return;
+        }
+
+        try {
+            Map<String, Object> reqData = new HashMap<>();
+            reqData.put("borrowingId", selected.getBorrowingId());
+            reqData.put("extraDays", 7);
+
+            Response resp = socketClient.sendRequest(new Request("RENEW_BORROWING", reqData));
+            if ("SUCCESS".equals(resp.getStatus())) {
+                showAlert("Thành công", resp.getMessage());
+                loadBorrowingsData();
+            } else {
+                showAlert("Lỗi", resp.getMessage());
+            }
+        } catch (IOException e) {
+            showAlert("Lỗi mạng", e.getMessage());
+        }
+    }
+
+    @FXML
+    public void handleRefreshFines() {
+        loadFinesData();
+    }
+
+    private void loadFinesData() {
+        try {
+            Response resp = socketClient.sendRequest(new Request("GET_FINES", null));
+            if ("SUCCESS".equals(resp.getStatus())) {
+                List<Fine> list = socketClient.convertData(resp.getData(), new TypeReference<List<Fine>>() {});
+                tblFines.setItems(FXCollections.observableArrayList(list));
+            }
+        } catch (IOException e) {
+            showAlert("Lỗi kết nối", e.getMessage());
+        }
+    }
+
+    @FXML
+    public void handlePaySelectedFine() {
+        Fine selected = tblFines.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            showAlert("Thông báo", "Vui lòng chọn phiếu phạt cần thu tiền.");
+            return;
+        }
+
+        if ("PAID".equals(selected.getStatus())) {
+            showAlert("Thông báo", "Phiếu phạt #" + selected.getFineId() + " đã được thanh toán trước đó.");
+            return;
+        }
+
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Xác nhận thu tiền");
+        confirm.setHeaderText("Thu tiền phạt #" + selected.getFineId());
+        confirm.setContentText("Xác nhận thu số tiền: " + String.format("%,.0f VNĐ", selected.getAmount()) +
+                "\nĐộc giả: " + selected.getReaderName() +
+                "\nLý do: " + selected.getReason());
+        Optional<ButtonType> result = confirm.showAndWait();
+
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            try {
+                Response resp = socketClient.sendRequest(new Request("PAY_FINE", selected.getFineId()));
+                if ("SUCCESS".equals(resp.getStatus())) {
+                    showAlert("Thành công", "Đã thu tiền phạt thành công!");
+                    loadFinesData();
+                } else {
+                    showAlert("Lỗi", resp.getMessage());
+                }
+            } catch (IOException e) {
+                showAlert("Lỗi mạng", e.getMessage());
+            }
+        }
+    }
+
+    @FXML
     public void handleLogout() {
         socketClient.disconnect();
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/library/client/views/LoginView.fxml"));
             Parent root = loader.load();
             Stage stage = (Stage) btnNavDashboard.getScene().getWindow();
-            stage.setTitle("Quản Lý Thư Viện - Đăng Nhập");
-            stage.setScene(new Scene(root, 750, 550));
+            stage.setMaximized(false);
+            stage.setResizable(true);
+            stage.setMinWidth(680);
+            stage.setMinHeight(520);
+            stage.setTitle("Quản Lý Thư Viện - Đăng Nhập & Đăng Ký");
+            stage.setScene(new Scene(root, 760, 620));
             stage.centerOnScreen();
         } catch (IOException e) {
             e.printStackTrace();

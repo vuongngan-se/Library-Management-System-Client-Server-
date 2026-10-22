@@ -7,8 +7,9 @@ schema.sql(line 1) để tạo database library_db và các bảng mẫu.
 Mở terminal tại thư mục gốc dự án và chạy lệnh:
 
 Terminal
-mvn exec:java -Dexec.mainClass="com.library.server.ServerApp"
-*(Nếu MySQL có username/password khác mặc định root/123456, bổ sung -Ddb.user=root -Ddb.pass=your_password)*
+mvn exec:java
+(Hoặc trên PowerShell nếu chỉ định mainClass: mvn exec:java "-Dexec.mainClass=com.library.server.ServerApp")
+*(Nếu MySQL có username/password khác mặc định root/123456, bổ sung "-Ddb.user=root" "-Ddb.pass=your_password")*
 
 3. Chạy Client
 Mở cửa sổ terminal mới và chạy ứng dụng giao diện JavaFX bằng lớp 

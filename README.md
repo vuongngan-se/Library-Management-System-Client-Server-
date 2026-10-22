@@ -31,12 +31,14 @@ Hệ thống quản lý thư viện được phát triển theo kiến trúc Cli
 
 ## 2. Các Chức Năng Chính
 
-* **Đăng nhập & Phân quyền**: Quản trị viên (`ADMIN`) và Nhân viên (`STAFF`).
-* **Quản lý Sách**: Thêm, sửa, xóa, tìm kiếm theo tiêu đề/tác giả/thể loại, theo dõi tồn kho.
-* **Quản lý Độc giả**: Thêm, sửa, xóa, quản lý trạng thái thẻ độc giả.
-* **Quản lý Mượn & Trả Sách**: Lập phiếu mượn, gia hạn, trả sách, tính phí phạt quá hạn.
-* **Thống kê & Báo cáo**: Dashboard tổng quan số lượng sách, độc giả và lượt mượn trả.
-* **Quản lý Kết nối**: Cấu hình linh hoạt Host IP và Port, hỗ trợ đa kết nối đồng thời.
+* **Đăng nhập & Đăng ký**: Phân quyền Quản trị viên (`ADMIN`) và Nhân viên (`STAFF`), hỗ trợ đăng ký tài khoản mới trực tiếp.
+* **Quản lý Sách**: Thêm, sửa, xóa, tìm kiếm theo tiêu đề/tác giả/thể loại/ISBN, theo dõi tồn kho và số lượng khả dụng.
+* **Quản lý Độc giả**: Thêm, sửa, xem thông tin liên lạc, địa chỉ và trạng thái thẻ độc giả.
+* **Quản lý Mượn & Trả Sách**: Lập phiếu mượn nhiều sách cùng lúc, theo dõi hạn trả, xử lý trả sách và khôi phục số lượng tự động.
+* **Gia hạn Sách Mượn**: Gia hạn thời hạn mượn thêm 7 ngày trực tiếp trên giao diện chỉ với 1 cú click.
+* **Quản lý Tiền phạt & Vi phạm**: Theo dõi danh sách phiếu phạt do trễ hạn/làm hỏng sách, tự động tính tiền phạt khi trả trễ (5.000đ/ngày) và xác nhận thu tiền phạt (`PAID`).
+* **Thống kê Dashboard**: Tổng quan số đầu sách, tổng số bản sách, sách khả dụng, số độc giả và số phiếu mượn đang kích hoạt.
+* **Chế độ dữ liệu linh hoạt**: Tự động kết nối MySQL (hỗ trợ cả mật khẩu thường lẫn trống), tự động chuyển sang In-Memory Fallback nếu chưa bật CSDL.
 
 ---
 
@@ -71,9 +73,13 @@ Hệ thống quản lý thư viện được phát triển theo kiến trúc Cli
 
 1. **Khởi chạy Server**:
    ```bash
-   mvn exec:java -Dexec.mainClass="com.library.server.ServerApp"
+   mvn exec:java
    ```
-   *(Nếu mật khẩu MySQL khác `123456`, truyền tham số: `-Ddb.user=root -Ddb.pass=your_password`)*
+   *Hoặc chỉ định rõ class (trên PowerShell cần bọc ngoặc kép cả tham số):*
+   ```powershell
+   mvn exec:java "-Dexec.mainClass=com.library.server.ServerApp"
+   ```
+   *(Nếu mật khẩu MySQL khác `123456`, truyền thêm tham số: `"-Ddb.user=root"` `"-Ddb.pass=your_password"`)*
 
 2. **Khởi chạy Client**:
    Mở thêm cửa sổ Terminal mới và chạy:
@@ -81,10 +87,12 @@ Hệ thống quản lý thư viện được phát triển theo kiến trúc Cli
    mvn javafx:run
    ```
 
-3. **Thông tin đăng nhập mặc định**:
+3. **Thông tin đăng nhập & Đăng ký**:
    * **Host / Port**: `localhost` / `8888`
-   * **Admin**: `admin` / `admin123`
-   * **Staff**: `staff` / `staff123`
+   * **Tài khoản mặc định**:
+     * **Admin**: `admin` / `admin123`
+     * **Staff**: `staff` / `staff123`
+   * **Đăng ký tài khoản mới**: Chọn tab **"ĐĂNG KÝ TÀI KHOẢN"** ngay trên giao diện để tạo tài khoản nhân viên thư viện mới. Dữ liệu sẽ được tự động lưu vào MySQL `users` và đồng bộ qua Server TCP.
 
 ---
 
@@ -97,7 +105,7 @@ Hệ thống quản lý thư viện được phát triển theo kiến trúc Cli
 3. **Mở cổng Firewall**: Cho phép cổng TCP `8888` hoạt động qua Windows Firewall trên máy Server.
 4. **Khởi chạy Server (Trên máy Server)**:
    ```bash
-   mvn exec:java -Dexec.mainClass="com.library.server.ServerApp"
+   mvn exec:java
    ```
 5. **Khởi chạy Client (Trên máy Client)**:
    ```bash
