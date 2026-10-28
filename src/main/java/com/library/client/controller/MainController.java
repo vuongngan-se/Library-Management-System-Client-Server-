@@ -55,6 +55,7 @@ public class MainController {
     @FXML private Button btnNavBooks;
     @FXML private Button btnNavReaders;
     @FXML private Button btnNavBorrow;
+    @FXML private Button btnNavReservations;
     @FXML private Button btnNavFines;
     @FXML private Button btnNavNetwork;
     @FXML private Button btnNavUsers;
@@ -66,6 +67,7 @@ public class MainController {
     @FXML private VBox viewBooks;
     @FXML private VBox viewReaders;
     @FXML private VBox viewBorrow;
+    @FXML private VBox viewReservations;
     @FXML private VBox viewFines;
     @FXML private VBox viewNetwork;
     @FXML private VBox viewUsers;
@@ -138,6 +140,20 @@ public class MainController {
     @FXML private TableColumn<Borrowing, String> colBorrowDue;
     @FXML private TableColumn<Borrowing, String> colBorrowStatus;
     @FXML private TableColumn<Borrowing, Double> colBorrowFine;
+
+    // Reservations Module
+    @FXML private TableView<Reservation> tblReservations;
+    @FXML private TableColumn<Reservation, Integer> colResId;
+    @FXML private TableColumn<Reservation, String> colResReader;
+    @FXML private TableColumn<Reservation, String> colResBook;
+    @FXML private TableColumn<Reservation, String> colResDate;
+    @FXML private TableColumn<Reservation, String> colResStatus;
+    @FXML private TableColumn<Reservation, String> colResNotes;
+    @FXML private TextField txtResReaderId;
+    @FXML private TextField txtResBookId;
+    @FXML private TextArea txtResNotes;
+    private List<Reservation> allReservationsList = new ArrayList<>();
+    private Reservation selectedReservation;
 
     // Fines Module
     @FXML private TableView<Fine> tblFines;
@@ -274,6 +290,11 @@ public class MainController {
                 loadReadersData();
             }
             showLiveToast(text);
+        } else if ("SYNC_RESERVATIONS".equals(type)) {
+            if (viewReservations != null && viewReservations.isVisible()) {
+                loadReservationsData();
+            }
+            showLiveToast(text);
         }
     }
 
@@ -369,6 +390,25 @@ public class MainController {
         colBorrowStatus.setCellValueFactory(new PropertyValueFactory<>("status"));
         colBorrowFine.setCellValueFactory(new PropertyValueFactory<>("fineAmount"));
 
+        // Reservations
+        if (tblReservations != null) {
+            colResId.setCellValueFactory(new PropertyValueFactory<>("reservationId"));
+            colResReader.setCellValueFactory(new PropertyValueFactory<>("readerName"));
+            colResBook.setCellValueFactory(new PropertyValueFactory<>("bookTitle"));
+            colResDate.setCellValueFactory(new PropertyValueFactory<>("reserveDate"));
+            colResStatus.setCellValueFactory(new PropertyValueFactory<>("status"));
+            colResNotes.setCellValueFactory(new PropertyValueFactory<>("notes"));
+
+            tblReservations.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
+                if (newVal != null) {
+                    selectedReservation = newVal;
+                    if (txtResReaderId != null) txtResReaderId.setText(String.valueOf(newVal.getReaderId()));
+                    if (txtResBookId != null) txtResBookId.setText(String.valueOf(newVal.getBookId()));
+                    if (txtResNotes != null) txtResNotes.setText(newVal.getNotes() != null ? newVal.getNotes() : "");
+                }
+            });
+        }
+
         // Fines
         colFineId.setCellValueFactory(new PropertyValueFactory<>("fineId"));
         colFineBorrowId.setCellValueFactory(new PropertyValueFactory<>("borrowingId"));
@@ -414,6 +454,7 @@ public class MainController {
         btnNavBooks.getStyleClass().remove("sidebar-btn-active");
         btnNavReaders.getStyleClass().remove("sidebar-btn-active");
         btnNavBorrow.getStyleClass().remove("sidebar-btn-active");
+        if (btnNavReservations != null) btnNavReservations.getStyleClass().remove("sidebar-btn-active");
         btnNavFines.getStyleClass().remove("sidebar-btn-active");
         btnNavNetwork.getStyleClass().remove("sidebar-btn-active");
         btnNavUsers.getStyleClass().remove("sidebar-btn-active");
@@ -425,6 +466,7 @@ public class MainController {
         viewBooks.setVisible(false);
         viewReaders.setVisible(false);
         viewBorrow.setVisible(false);
+        if (viewReservations != null) viewReservations.setVisible(false);
         viewFines.setVisible(false);
         viewNetwork.setVisible(false);
         viewUsers.setVisible(false);
@@ -474,6 +516,12 @@ public class MainController {
         Platform.runLater(() -> {
             if (txtQuickScan != null) txtQuickScan.requestFocus();
         });
+    }
+
+    @FXML
+    public void showReservations() {
+        setActiveNav(btnNavReservations, viewReservations);
+        loadReservationsData();
     }
 
     @FXML
@@ -1152,6 +1200,142 @@ public class MainController {
         content.getChildren().addAll(lblInfo, lblTip);
         dialog.getDialogPane().setContent(content);
         dialog.showAndWait();
+    }
+
+    @FXML
+    public void handleQuickReserveBook() {
+        Book selected = tblBooks.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            showAlert("Cảnh báo", "Vui lòng chọn một cuốn sách từ bảng trước khi đặt trước!");
+            return;
+        }
+        showReservations();
+        if (txtResBookId != null) {
+            txtResBookId.setText(String.valueOf(selected.getBookId()));
+        }
+        if (txtResNotes != null) {
+            txtResNotes.setText("Đặt trước cuốn: " + selected.getTitle());
+        }
+        if (txtResReaderId != null) {
+            txtResReaderId.requestFocus();
+        }
+    }
+
+    @FXML
+    public void handleRefreshReservations() {
+        loadReservationsData();
+    }
+
+    public void loadReservationsData() {
+        try {
+            Response resp = socketClient.sendRequest(new Request("GET_RESERVATIONS", null));
+            if ("SUCCESS".equals(resp.getStatus()) && resp.getData() != null) {
+                allReservationsList = socketClient.convertData(resp.getData(), new TypeReference<List<Reservation>>() {});
+                if (tblReservations != null) {
+                    tblReservations.setItems(FXCollections.observableArrayList(allReservationsList));
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @FXML
+    public void handleCreateNewReservation() {
+        try {
+            String readerIdStr = txtResReaderId != null ? txtResReaderId.getText().trim() : "";
+            String bookIdStr = txtResBookId != null ? txtResBookId.getText().trim() : "";
+            String notes = txtResNotes != null ? txtResNotes.getText().trim() : "";
+
+            if (readerIdStr.isEmpty() || bookIdStr.isEmpty()) {
+                showAlert("Cảnh báo", "Vui lòng nhập Mã độc giả và Mã sách!");
+                return;
+            }
+
+            int readerId = Integer.parseInt(readerIdStr);
+            int bookId = Integer.parseInt(bookIdStr);
+
+            Map<String, Object> reqData = new HashMap<>();
+            reqData.put("readerId", readerId);
+            reqData.put("bookId", bookId);
+            reqData.put("notes", notes);
+
+            Response resp = socketClient.sendRequest(new Request("CREATE_RESERVATION", reqData));
+            if ("SUCCESS".equals(resp.getStatus())) {
+                showAlert("Thành công", "Đã tạo phiếu đặt trước sách thành công!");
+                if (txtResReaderId != null) txtResReaderId.clear();
+                if (txtResBookId != null) txtResBookId.clear();
+                if (txtResNotes != null) txtResNotes.clear();
+                loadReservationsData();
+            } else {
+                showAlert("Lỗi", resp.getMessage());
+            }
+        } catch (NumberFormatException e) {
+            showAlert("Lỗi", "Mã độc giả và Mã sách phải là số nguyên!");
+        } catch (Exception e) {
+            showAlert("Lỗi", "Lỗi kết nối: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    public void handleFulfillSelectedReservation() {
+        if (tblReservations == null) return;
+        Reservation selected = tblReservations.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            showAlert("Cảnh báo", "Vui lòng chọn phiếu đặt trước cần hoàn tất nhận sách!");
+            return;
+        }
+        if ("FULFILLED".equalsIgnoreCase(selected.getStatus())) {
+            showAlert("Thông báo", "Phiếu đặt trước này đã hoàn tất nhận sách trước đó!");
+            return;
+        }
+        if ("CANCELLED".equalsIgnoreCase(selected.getStatus())) {
+            showAlert("Thông báo", "Phiếu đặt trước này đã bị hủy!");
+            return;
+        }
+
+        try {
+            Response resp = socketClient.sendRequest(new Request("FULFILL_RESERVATION", selected.getReservationId()));
+            if ("SUCCESS".equals(resp.getStatus())) {
+                showAlert("Thành công", "Đã xác nhận hoàn tất nhận sách cho phiếu #" + selected.getReservationId());
+                loadReservationsData();
+            } else {
+                showAlert("Lỗi", resp.getMessage());
+            }
+        } catch (Exception e) {
+            showAlert("Lỗi", "Lỗi gửi yêu cầu: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    public void handleCancelSelectedReservation() {
+        if (tblReservations == null) return;
+        Reservation selected = tblReservations.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            showAlert("Cảnh báo", "Vui lòng chọn phiếu đặt trước muốn hủy!");
+            return;
+        }
+        if ("CANCELLED".equalsIgnoreCase(selected.getStatus())) {
+            showAlert("Thông báo", "Phiếu đặt trước này đã bị hủy trước đó!");
+            return;
+        }
+
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION, "Bạn có chắc chắn muốn hủy phiếu đặt trước #" + selected.getReservationId() + " (" + selected.getBookTitle() + ")?", ButtonType.YES, ButtonType.NO);
+        confirm.setHeaderText(null);
+        Optional<ButtonType> opt = confirm.showAndWait();
+        if (opt.isPresent() && opt.get() == ButtonType.YES) {
+            try {
+                Response resp = socketClient.sendRequest(new Request("CANCEL_RESERVATION", selected.getReservationId()));
+                if ("SUCCESS".equals(resp.getStatus())) {
+                    showAlert("Thành công", "Đã hủy phiếu đặt trước #" + selected.getReservationId());
+                    loadReservationsData();
+                } else {
+                    showAlert("Lỗi", resp.getMessage());
+                }
+            } catch (Exception e) {
+                showAlert("Lỗi", "Lỗi gửi yêu cầu: " + e.getMessage());
+            }
+        }
     }
 
     @FXML

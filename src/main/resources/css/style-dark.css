@@ -54,14 +54,18 @@
 }
 
 /* Form Fields */
-.text-field, .password-field {
+.text-field, .password-field, .text-area {
     -fx-background-color: #0b1120;
     -fx-text-fill: #f8fafc;
     -fx-border-color: #334155;
     -fx-prompt-text-fill: #64748b;
 }
 
-.text-field:focused, .password-field:focused {
+.text-area .content {
+    -fx-background-color: #0b1120;
+}
+
+.text-field:focused, .password-field:focused, .text-area:focused {
     -fx-border-color: #3b82f6;
 }
 

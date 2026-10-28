@@ -15,12 +15,14 @@ public class InMemoryStore {
     private static final Map<Integer, Reader> readers = new ConcurrentHashMap<>();
     private static final Map<Integer, Borrowing> borrowings = new ConcurrentHashMap<>();
     private static final Map<Integer, Fine> fines = new ConcurrentHashMap<>();
+    private static final Map<Integer, Reservation> reservations = new ConcurrentHashMap<>();
 
     private static final AtomicInteger userIdSeq = new AtomicInteger(100);
     private static final AtomicInteger bookIdSeq = new AtomicInteger(300);
     private static final AtomicInteger readerIdSeq = new AtomicInteger(100);
     private static final AtomicInteger borrowingIdSeq = new AtomicInteger(600);
     private static final AtomicInteger fineIdSeq = new AtomicInteger(100);
+    private static final AtomicInteger reservationIdSeq = new AtomicInteger(100);
 
     static {
         // 1. Users
@@ -288,6 +290,26 @@ public class InMemoryStore {
         seedFine(8, 502, 10000.0, "PAID",   "Làm bẩn nhẹ bìa sách #145 - Đã thu phí xử lý", "2026-10-10 09:00:00");
         seedFine(9, 506, 15000.0, "PAID",   "Trễ hạn 1 ngày - Đã thanh toán khi trả sách", "2026-10-10 09:00:00");
         seedFine(10, 513, 20000.0, "PAID",  "Gấp góc hư hỏng trang sách - Đã bồi thường", "2026-10-10 09:00:00");
+
+        // 7. Reservations (Sample initial reservations)
+        seedReservation(1, 1, 102, "2026-10-25", "PENDING", "Độc giả hẹn lấy sáng thứ 7");
+        seedReservation(2, 3, 101, "2026-10-26", "PENDING", "Cần mượn gấp để làm đồ án tốt nghiệp");
+        seedReservation(3, 5, 103, "2026-10-20", "FULFILLED", "Đã nhận sách ngày 22/10");
+    }
+
+    private static void seedReservation(int id, int readerId, int bookId, String date, String status, String notes) {
+        Reservation r = new Reservation();
+        r.setReservationId(id);
+        r.setReaderId(readerId);
+        Reader rd = readers.get(readerId);
+        if (rd != null) r.setReaderName(rd.getFullName());
+        r.setBookId(bookId);
+        Book b = books.get(bookId);
+        if (b != null) r.setBookTitle(b.getTitle());
+        r.setReserveDate(date);
+        r.setStatus(status);
+        r.setNotes(notes);
+        reservations.put(id, r);
     }
 
     private static void addBook(int id, String title, String author, int categoryId, String publisher, int year, int qty, int avail, String isbn) {
@@ -999,6 +1021,114 @@ public class InMemoryStore {
             return true;
         }
         return true;
+    }
+
+    public static List<Reservation> getAllReservations() {
+        if (!DatabaseConfig.isInMemoryMode()) {
+            List<Reservation> list = new ArrayList<>();
+            try (Connection conn = DatabaseConfig.getConnection()) {
+                if (conn != null) {
+                    String sql = "SELECT r.*, rd.full_name as reader_name, b.title as book_title " +
+                            "FROM reservations r " +
+                            "LEFT JOIN readers rd ON r.reader_id = rd.reader_id " +
+                            "LEFT JOIN books b ON r.book_id = b.book_id " +
+                            "ORDER BY r.reservation_id DESC";
+                    PreparedStatement ps = conn.prepareStatement(sql);
+                    ResultSet rs = ps.executeQuery();
+                    while (rs.next()) {
+                        Reservation r = new Reservation(
+                                rs.getInt("reservation_id"),
+                                rs.getInt("reader_id"),
+                                rs.getString("reader_name"),
+                                rs.getInt("book_id"),
+                                rs.getString("book_title"),
+                                rs.getString("reserve_date"),
+                                rs.getString("status"),
+                                rs.getString("notes")
+                        );
+                        list.add(r);
+                    }
+                    if (!list.isEmpty()) {
+                        return list;
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+        List<Reservation> resList = new ArrayList<>(reservations.values());
+        resList.sort((a, b) -> Integer.compare(b.getReservationId(), a.getReservationId()));
+        return resList;
+    }
+
+    public static boolean saveReservation(Reservation r) {
+        if (r.getReservationId() <= 0) {
+            r.setReservationId(reservationIdSeq.incrementAndGet());
+        }
+        if (r.getReaderName() == null) {
+            Reader rd = readers.get(r.getReaderId());
+            if (rd != null) r.setReaderName(rd.getFullName());
+        }
+        if (r.getBookTitle() == null) {
+            Book b = books.get(r.getBookId());
+            if (b != null) r.setBookTitle(b.getTitle());
+        }
+        if (r.getReserveDate() == null) {
+            r.setReserveDate(java.time.LocalDate.now().toString());
+        }
+        if (r.getStatus() == null) {
+            r.setStatus("PENDING");
+        }
+        if (!DatabaseConfig.isInMemoryMode()) {
+            try (Connection conn = DatabaseConfig.getConnection()) {
+                if (conn != null) {
+                    String sql = "INSERT INTO reservations(reservation_id, reader_id, book_id, reserve_date, status, notes) VALUES(?,?,?,?,?,?)";
+                    PreparedStatement ps = conn.prepareStatement(sql);
+                    ps.setInt(1, r.getReservationId());
+                    ps.setInt(2, r.getReaderId());
+                    ps.setInt(3, r.getBookId());
+                    ps.setString(4, r.getReserveDate());
+                    ps.setString(5, r.getStatus());
+                    ps.setString(6, r.getNotes());
+                    ps.executeUpdate();
+                }
+            } catch (Exception ignored) {}
+        }
+        reservations.put(r.getReservationId(), r);
+        return true;
+    }
+
+    public static List<Reservation> findPendingReservationsByBook(int bookId) {
+        List<Reservation> result = new ArrayList<>();
+        for (Reservation r : reservations.values()) {
+            if (r.getBookId() == bookId && "PENDING".equalsIgnoreCase(r.getStatus())) {
+                result.add(r);
+            }
+        }
+        result.sort(Comparator.comparingInt(Reservation::getReservationId));
+        return result;
+    }
+
+    public static boolean updateReservationStatus(int reservationId, String status) {
+        if (!DatabaseConfig.isInMemoryMode()) {
+            try (Connection conn = DatabaseConfig.getConnection()) {
+                if (conn != null) {
+                    String sql = "UPDATE reservations SET status = ? WHERE reservation_id = ?";
+                    PreparedStatement ps = conn.prepareStatement(sql);
+                    ps.setString(1, status);
+                    ps.setInt(2, reservationId);
+                    ps.executeUpdate();
+                }
+            } catch (Exception ignored) {}
+        }
+        Reservation r = reservations.get(reservationId);
+        if (r != null) {
+            r.setStatus(status);
+            return true;
+        }
+        return false;
+    }
+
+    public static boolean cancelReservation(int reservationId) {
+        return updateReservationStatus(reservationId, "CANCELLED");
     }
 
     public static Map<String, Integer> getCategoryDistribution() {

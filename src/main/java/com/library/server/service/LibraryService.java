@@ -71,6 +71,14 @@ public class LibraryService {
                     return handleExportBorrowingsCsv();
                 case "EXPORT_FINES_CSV":
                     return handleExportFinesCsv();
+                case "GET_RESERVATIONS":
+                    return Response.success("Lấy danh sách đặt trước thành công", InMemoryStore.getAllReservations());
+                case "CREATE_RESERVATION":
+                    return handleCreateReservation(data);
+                case "CANCEL_RESERVATION":
+                    return handleCancelReservation(data);
+                case "FULFILL_RESERVATION":
+                    return handleFulfillReservation(data);
                 case "GET_ACTIVE_SESSIONS":
                     return handleGetActiveSessions();
                 case "KICK_SESSION":
@@ -345,6 +353,17 @@ public class LibraryService {
                 if (book != null) {
                     book.setAvailableQuantity(book.getAvailableQuantity() + detail.getQuantity());
                     InMemoryStore.saveBook(book);
+
+                    // Auto notification hook for pending reservations
+                    List<Reservation> pendingRes = InMemoryStore.findPendingReservationsByBook(book.getBookId());
+                    if (pendingRes != null && !pendingRes.isEmpty()) {
+                        Reservation first = pendingRes.get(0);
+                        first.setStatus("NOTIFIED");
+                        InMemoryStore.updateReservationStatus(first.getReservationId(), "NOTIFIED");
+                        ChatManager.broadcast(new ChatMessage("SYSTEM", "Hệ thống", "SYSTEM",
+                                "🔔 [Đặt trước] Cuốn '" + book.getTitle() + "' đã có sẵn! Ưu tiên độc giả " + first.getReaderName() + " (Mã: #" + first.getReaderId() + ") tới nhận sách.",
+                                "SYNC_RESERVATIONS"));
+                    }
                 }
             }
         }
@@ -668,5 +687,100 @@ public class LibraryService {
         ChatMessage chatMsg = new ChatMessage(sender, senderName, senderRole, message.trim(), type);
         ChatManager.broadcast(chatMsg);
         return Response.success("Gửi tin nhắn thành công", chatMsg);
+    }
+
+    private Response handleCreateReservation(Object data) {
+        if (data == null) {
+            return Response.error("Dữ liệu đặt trước không hợp lệ.");
+        }
+        Reservation r = mapper.convertValue(data, Reservation.class);
+        if (r.getReaderId() <= 0) {
+            return Response.error("Mã độc giả không hợp lệ.");
+        }
+        if (r.getBookId() <= 0) {
+            return Response.error("Mã sách không hợp lệ.");
+        }
+
+        Reader reader = InMemoryStore.getAllReaders().stream()
+                .filter(x -> x.getReaderId() == r.getReaderId())
+                .findFirst().orElse(null);
+        if (reader == null) {
+            return Response.error("Không tìm thấy độc giả #" + r.getReaderId());
+        }
+        if (!"ACTIVE".equalsIgnoreCase(reader.getCardStatus())) {
+            return Response.error("Thẻ độc giả đang bị khóa hoặc hết hạn. Không thể đặt trước!");
+        }
+
+        Book book = InMemoryStore.getAllBooks().stream()
+                .filter(x -> x.getBookId() == r.getBookId())
+                .findFirst().orElse(null);
+        if (book == null) {
+            return Response.error("Không tìm thấy cuốn sách #" + r.getBookId());
+        }
+
+        r.setReaderName(reader.getFullName());
+        r.setBookTitle(book.getTitle());
+        r.setStatus("PENDING");
+        if (r.getReserveDate() == null || r.getReserveDate().trim().isEmpty()) {
+            r.setReserveDate(LocalDate.now().toString());
+        }
+
+        boolean saved = InMemoryStore.saveReservation(r);
+        if (saved) {
+            ChatManager.broadcast(new ChatMessage("SYSTEM", "Hệ thống", "SYSTEM",
+                    "Độc giả " + r.getReaderName() + " vừa đặt trước cuốn '" + r.getBookTitle() + "'.", "SYNC_RESERVATIONS"));
+            return Response.success("Đặt trước sách thành công!", r);
+        }
+        return Response.error("Không thể lưu thông tin đặt trước.");
+    }
+
+    private Response handleCancelReservation(Object data) {
+        int resId = 0;
+        if (data instanceof Integer) {
+            resId = (Integer) data;
+        } else if (data instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) data;
+            Object idObj = map.get("reservationId");
+            if (idObj != null) resId = Integer.parseInt(idObj.toString());
+        } else if (data != null) {
+            resId = Integer.parseInt(data.toString());
+        }
+
+        if (resId <= 0) {
+            return Response.error("Mã đặt trước không hợp lệ.");
+        }
+
+        boolean ok = InMemoryStore.cancelReservation(resId);
+        if (ok) {
+            ChatManager.broadcast(new ChatMessage("SYSTEM", "Hệ thống", "SYSTEM",
+                    "Đơn đặt trước #" + resId + " đã bị hủy.", "SYNC_RESERVATIONS"));
+            return Response.success("Hủy đặt trước thành công!", resId);
+        }
+        return Response.error("Không tìm thấy mã đặt trước để hủy.");
+    }
+
+    private Response handleFulfillReservation(Object data) {
+        int resId = 0;
+        if (data instanceof Integer) {
+            resId = (Integer) data;
+        } else if (data instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) data;
+            Object idObj = map.get("reservationId");
+            if (idObj != null) resId = Integer.parseInt(idObj.toString());
+        } else if (data != null) {
+            resId = Integer.parseInt(data.toString());
+        }
+
+        if (resId <= 0) {
+            return Response.error("Mã đặt trước không hợp lệ.");
+        }
+
+        boolean ok = InMemoryStore.updateReservationStatus(resId, "FULFILLED");
+        if (ok) {
+            ChatManager.broadcast(new ChatMessage("SYSTEM", "Hệ thống", "SYSTEM",
+                    "Đơn đặt trước #" + resId + " đã hoàn tất nhận sách.", "SYNC_RESERVATIONS"));
+            return Response.success("Hoàn tất đặt trước thành công!", resId);
+        }
+        return Response.error("Không tìm thấy mã đặt trước để hoàn tất.");
     }
 }

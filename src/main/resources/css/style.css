@@ -133,6 +133,20 @@
     -fx-background-color: #74b9ff;
 }
 
+.btn-warning {
+    -fx-background-color: #f39c12;
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-padding: 10px 18px;
+    -fx-background-radius: 6px;
+    -fx-cursor: hand;
+}
+
+.btn-warning:hover {
+    -fx-background-color: #d68910;
+}
+
 .btn-secondary {
     -fx-background-color: #636e72;
     -fx-text-fill: white;

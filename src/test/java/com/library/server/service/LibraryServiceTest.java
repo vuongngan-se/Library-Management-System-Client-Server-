@@ -1,6 +1,7 @@
 package com.library.server.service;
 
 import com.library.common.model.Book;
+import com.library.common.model.Reservation;
 import com.library.common.model.User;
 import com.library.common.protocol.Request;
 import com.library.common.protocol.Response;
@@ -406,6 +407,85 @@ public class LibraryServiceTest {
         com.library.common.model.ChatMessage returnMsg = updatedHistory.get(updatedHistory.size() - 1);
         assertEquals("SYNC_BOOKS", returnMsg.getType());
         assertTrue(returnMsg.getMessage().contains("Sách đã trở lại kho"));
+    }
+
+    @Test
+    @DisplayName("Test Book Reservation Lifecycle and Auto Return Notification Hook")
+    public void testBookReservationLifecycleAndReturnHook() {
+        // 1. Get initial reservations
+        Response getRes = service.handleRequest(new Request("GET_RESERVATIONS", null));
+        assertEquals("SUCCESS", getRes.getStatus());
+        assertNotNull(getRes.getData());
+
+        // 2. Create a new reservation for Reader 2 and Book 105
+        Map<String, Object> newRes = new HashMap<>();
+        newRes.put("readerId", 2);
+        newRes.put("bookId", 105);
+        newRes.put("notes", "Cần mượn gấp làm đồ án");
+        Response createRes = service.handleRequest(new Request("CREATE_RESERVATION", newRes));
+        assertEquals("SUCCESS", createRes.getStatus());
+        assertNotNull(createRes.getData());
+
+        Reservation created = com.library.common.protocol.NetworkUtils.getMapper().convertValue(createRes.getData(), Reservation.class);
+        int resId = created.getReservationId();
+        assertTrue(resId > 0);
+        assertEquals("PENDING", created.getStatus());
+
+        // 3. Borrow book 105 first so we can return it
+        Map<String, Object> borrowData = new HashMap<>();
+        borrowData.put("readerId", 1);
+        borrowData.put("userId", 1);
+        borrowData.put("bookIds", Arrays.asList(105));
+        borrowData.put("days", 14);
+        Response borrowRes = service.handleRequest(new Request("BORROW_BOOKS", borrowData));
+        assertEquals("SUCCESS", borrowRes.getStatus());
+        Map<?, ?> borrowObj = (Map<?, ?>) com.library.common.protocol.NetworkUtils.getMapper().convertValue(borrowRes.getData(), Map.class);
+        int borrowingId = Integer.parseInt(borrowObj.get("borrowingId").toString());
+
+        // Clear chat history to isolate return notifications
+        service.handleRequest(new Request("CLEAR_CHAT_HISTORY", null));
+
+        // 4. Return book 105 -> Trigger automatic reservation notification hook
+        Map<String, Object> returnData = new HashMap<>();
+        returnData.put("borrowingId", borrowingId);
+        Response returnRes = service.handleRequest(new Request("RETURN_BOOKS", returnData));
+        assertEquals("SUCCESS", returnRes.getStatus());
+
+        // Verify that chat broadcast contains notification hook for the pending reservation
+        List<com.library.common.model.ChatMessage> history = com.library.server.net.ChatManager.getHistory();
+        boolean foundHookNotice = history.stream().anyMatch(m ->
+                "SYNC_RESERVATIONS".equals(m.getType()) && m.getMessage().contains("🔔 [Đặt trước]"));
+        assertTrue(foundHookNotice, "Phải có broadcast SYNC_RESERVATIONS thông báo đặt trước sách đã sẵn sàng!");
+
+        // 5. Verify the reservation status changed to NOTIFIED
+        Response listRes = service.handleRequest(new Request("GET_RESERVATIONS", null));
+        List<?> allRes = (List<?>) listRes.getData();
+        boolean notified = false;
+        for (Object item : allRes) {
+            Reservation r = com.library.common.protocol.NetworkUtils.getMapper().convertValue(item, Reservation.class);
+            if (r.getReservationId() == resId) {
+                assertEquals("NOTIFIED", r.getStatus());
+                notified = true;
+                break;
+            }
+        }
+        assertTrue(notified, "Trạng thái đơn đặt trước phải được chuyển sang NOTIFIED sau khi sách được trả về kho.");
+
+        // 6. Fulfill reservation
+        Response fulfillRes = service.handleRequest(new Request("FULFILL_RESERVATION", resId));
+        assertEquals("SUCCESS", fulfillRes.getStatus());
+
+        // 7. Cancel another reservation test
+        Map<String, Object> cancelResData = new HashMap<>();
+        cancelResData.put("readerId", 4);
+        cancelResData.put("bookId", 106);
+        cancelResData.put("notes", "Đăng ký thử nghiệm");
+        Response resToCancel = service.handleRequest(new Request("CREATE_RESERVATION", cancelResData));
+        assertEquals("SUCCESS", resToCancel.getStatus());
+        Reservation cancelObj = com.library.common.protocol.NetworkUtils.getMapper().convertValue(resToCancel.getData(), Reservation.class);
+
+        Response cancelResult = service.handleRequest(new Request("CANCEL_RESERVATION", cancelObj.getReservationId()));
+        assertEquals("SUCCESS", cancelResult.getStatus());
     }
 }
 

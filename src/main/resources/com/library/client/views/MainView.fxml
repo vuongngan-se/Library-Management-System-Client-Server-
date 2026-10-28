@@ -39,6 +39,7 @@
                 <Button fx:id="btnNavBooks" maxWidth="1.7976931348623157E308" onAction="#showBooks" styleClass="sidebar-btn" text="📖 Quản lý Sách" />
                 <Button fx:id="btnNavReaders" maxWidth="1.7976931348623157E308" onAction="#showReaders" styleClass="sidebar-btn" text="🎴 Quản lý Độc giả" />
                 <Button fx:id="btnNavBorrow" maxWidth="1.7976931348623157E308" onAction="#showBorrow" styleClass="sidebar-btn" text="🔄 Mượn &amp; Trả sách" />
+                <Button fx:id="btnNavReservations" maxWidth="1.7976931348623157E308" onAction="#showReservations" styleClass="sidebar-btn" text="📌 Đặt trước Sách" />
                 <Button fx:id="btnNavFines" maxWidth="1.7976931348623157E308" onAction="#showFines" styleClass="sidebar-btn" text="💰 Quản lý Tiền phạt" />
                 <Button fx:id="btnNavNetwork" maxWidth="1.7976931348623157E308" onAction="#showNetwork" styleClass="sidebar-btn" text="🌐 Giám sát Mạng" />
                 <Button fx:id="btnNavUsers" maxWidth="1.7976931348623157E308" onAction="#showUsers" styleClass="sidebar-btn" text="👥 Quản lý Tài khoản" />
@@ -230,6 +231,7 @@
                                         </children>
                                     </HBox>
                                     <Button maxWidth="Infinity" onAction="#handleShowBookQrCode" styleClass="btn-info" text="📱 Xem Mã QR Sách" />
+                                    <Button maxWidth="Infinity" onAction="#handleQuickReserveBook" styleClass="btn-warning" text="📌 Đặt trước Sách này" />
                                 </children>
                             </VBox>
                         </children>
@@ -559,6 +561,56 @@
                             </HBox>
                         </children>
                     </VBox>
+                </children>
+            </VBox>
+
+            <!-- Reservations View -->
+            <VBox fx:id="viewReservations" spacing="15.0" visible="false">
+                <children>
+                    <HBox alignment="CENTER_LEFT" spacing="10.0">
+                        <children>
+                            <Label text="📌 Quản lý Đặt trước Sách (Book Reservations)" textFill="#2c3e50">
+                                <font>
+                                    <Font name="System Bold" size="20.0" />
+                                </font>
+                            </Label>
+                            <Region HBox.hgrow="ALWAYS" />
+                            <Button onAction="#handleRefreshReservations" styleClass="btn-secondary" text="🔄 Làm mới" />
+                            <Button onAction="#handleFulfillSelectedReservation" styleClass="btn-success" text="✅ Hoàn tất nhận sách" />
+                            <Button onAction="#handleCancelSelectedReservation" styleClass="btn-danger" text="❌ Hủy đặt trước" />
+                        </children>
+                    </HBox>
+                    <HBox spacing="20.0" VBox.vgrow="ALWAYS">
+                        <!-- Table of reservations -->
+                        <TableView fx:id="tblReservations" HBox.hgrow="ALWAYS">
+                            <columns>
+                                <TableColumn fx:id="colResId" prefWidth="60.0" text="Mã" />
+                                <TableColumn fx:id="colResReader" prefWidth="160.0" text="Độc giả" />
+                                <TableColumn fx:id="colResBook" prefWidth="200.0" text="Tên sách" />
+                                <TableColumn fx:id="colResDate" prefWidth="110.0" text="Ngày đặt" />
+                                <TableColumn fx:id="colResStatus" prefWidth="110.0" text="Trạng thái" />
+                                <TableColumn fx:id="colResNotes" prefWidth="180.0" text="Ghi chú" />
+                            </columns>
+                        </TableView>
+                        <!-- Form to create new reservation -->
+                        <VBox prefWidth="320.0" spacing="10.0" styleClass="card">
+                            <children>
+                                <Label text="Lập phiếu Đặt trước mới" textFill="#2c3e50">
+                                    <font>
+                                        <Font name="System Bold" size="14.0" />
+                                    </font>
+                                </Label>
+                                <Label text="Mã độc giả:" />
+                                <TextField fx:id="txtResReaderId" promptText="Nhập ID độc giả (VD: 1)" />
+                                <Label text="Mã sách đặt trước:" />
+                                <TextField fx:id="txtResBookId" promptText="Nhập ID sách (VD: 101)" />
+                                <Label text="Ghi chú / Yêu cầu:" />
+                                <TextArea fx:id="txtResNotes" prefRowCount="3" promptText="Nhập lý do hẹn lấy hoặc thời gian mong muốn..." wrapText="true" />
+                                <Region VBox.vgrow="ALWAYS" />
+                                <Button maxWidth="Infinity" onAction="#handleCreateNewReservation" styleClass="btn-primary" text="📌 Xác nhận Đặt trước" />
+                            </children>
+                        </VBox>
+                    </HBox>
                 </children>
             </VBox>
         </StackPane>
