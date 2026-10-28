@@ -229,6 +229,7 @@
                                             <Button onAction="#handleDeleteBook" styleClass="btn-danger" text="Xóa" HBox.hgrow="ALWAYS" />
                                         </children>
                                     </HBox>
+                                    <Button maxWidth="Infinity" onAction="#handleShowBookQrCode" styleClass="btn-info" text="📱 Xem Mã QR Sách" />
                                 </children>
                             </VBox>
                         </children>
@@ -281,6 +282,7 @@
                                             <Button onAction="#handleUpdateReader" styleClass="btn-primary" text="Cập nhật" HBox.hgrow="ALWAYS" />
                                         </children>
                                     </HBox>
+                                    <Button maxWidth="Infinity" onAction="#handleShowReaderQrCard" styleClass="btn-info" text="🎴 Thẻ Độc Giả &amp; Mã QR" />
                                 </children>
                             </VBox>
                         </children>
@@ -305,6 +307,8 @@
                                         <Font name="System Bold" size="15.0" />
                                     </font>
                                 </Label>
+                                <Label text="⚡ Quét mã QR / Nhập nhanh:" />
+                                <TextField fx:id="txtQuickScan" onAction="#handleQuickScan" promptText="Quét/dán mã QR hoặc nhập ISBN/Mã thẻ rồi bấm Enter" style="-fx-border-color: #3b82f6; -fx-background-color: #f0f7ff;" />
                                 <Label text="Mã độc giả:" />
                                 <TextField fx:id="txtBorrowReaderId" promptText="Nhập ID độc giả" />
                                 <Label text="Mã sách mượn (phân cách bằng dấu phẩy):" />

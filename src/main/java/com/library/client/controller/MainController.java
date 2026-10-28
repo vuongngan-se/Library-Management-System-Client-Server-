@@ -25,6 +25,9 @@ import javafx.scene.chart.PieChart;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import com.library.client.util.QRCodeUtils;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -124,6 +127,7 @@ public class MainController {
     @FXML private TextField txtReaderAddress;
 
     // Borrow Module
+    @FXML private TextField txtQuickScan;
     @FXML private TextField txtBorrowReaderId;
     @FXML private TextField txtBorrowBookIds;
     @FXML private TextField txtBorrowDays;
@@ -178,6 +182,8 @@ public class MainController {
     private Reader selectedReader;
     private User selectedUser;
     private List<User> allUsersList = new ArrayList<>();
+    private List<Book> allBooksList = new ArrayList<>();
+    private List<Reader> allReadersList = new ArrayList<>();
 
     @FXML
     public void initialize() {
@@ -463,6 +469,11 @@ public class MainController {
     public void showBorrow() {
         setActiveNav(btnNavBorrow, viewBorrow);
         loadBorrowingsData();
+        if (allBooksList.isEmpty()) loadBooksData();
+        if (allReadersList.isEmpty()) loadReadersData();
+        Platform.runLater(() -> {
+            if (txtQuickScan != null) txtQuickScan.requestFocus();
+        });
     }
 
     @FXML
@@ -779,6 +790,7 @@ public class MainController {
             Response resp = socketClient.sendRequest(new Request("GET_BOOKS", null));
             if ("SUCCESS".equals(resp.getStatus())) {
                 List<Book> list = socketClient.convertData(resp.getData(), new TypeReference<List<Book>>() {});
+                allBooksList = list;
                 tblBooks.setItems(FXCollections.observableArrayList(list));
             }
         } catch (IOException e) {
@@ -911,6 +923,7 @@ public class MainController {
             Response resp = socketClient.sendRequest(new Request("GET_READERS", null));
             if ("SUCCESS".equals(resp.getStatus())) {
                 List<Reader> list = socketClient.convertData(resp.getData(), new TypeReference<List<Reader>>() {});
+                allReadersList = list;
                 tblReaders.setItems(FXCollections.observableArrayList(list));
             }
         } catch (IOException e) {
@@ -1099,6 +1112,159 @@ public class MainController {
             }
         } catch (IOException e) {
             showAlert("Lỗi mạng", e.getMessage());
+        }
+    }
+
+    @FXML
+    public void handleShowBookQrCode() {
+        if (selectedBook == null) {
+            showAlert("Thông báo", "Vui lòng chọn một cuốn sách từ bảng để xem mã QR!");
+            return;
+        }
+
+        String qrPayload = "BOOK:" + selectedBook.getBookId() + ":" + (selectedBook.getIsbn() != null ? selectedBook.getIsbn() : "") + ":" + selectedBook.getTitle();
+        Image qrImage = QRCodeUtils.generateQRCode(qrPayload, 220, 220);
+
+        Alert dialog = new Alert(Alert.AlertType.INFORMATION);
+        dialog.setTitle("Mã QR Sách Thư Viện");
+        dialog.setHeaderText("Mã QR: " + selectedBook.getTitle());
+
+        VBox content = new VBox(10);
+        content.setAlignment(Pos.CENTER);
+        content.setPadding(new Insets(10));
+
+        if (qrImage != null) {
+            ImageView imgView = new ImageView(qrImage);
+            imgView.setFitWidth(200);
+            imgView.setFitHeight(200);
+            content.getChildren().add(imgView);
+        }
+
+        Label lblInfo = new Label("• Mã sách (ID): " + selectedBook.getBookId() +
+                "\n• ISBN: " + (selectedBook.getIsbn() != null && !selectedBook.getIsbn().isEmpty() ? selectedBook.getIsbn() : "Chưa có") +
+                "\n• Tác giả: " + selectedBook.getAuthor() +
+                "\n• Khả dụng: " + selectedBook.getAvailableQuantity() + " / " + selectedBook.getQuantity());
+        lblInfo.setStyle("-fx-font-size: 13px; -fx-text-fill: #2c3e50;");
+
+        Label lblTip = new Label("💡 Quét mã bằng máy quét hoặc dán vào ô 'Quét nhanh' tại quầy Mượn-Trả.");
+        lblTip.setStyle("-fx-font-size: 11px; -fx-text-fill: #7f8c8d; -fx-font-style: italic;");
+
+        content.getChildren().addAll(lblInfo, lblTip);
+        dialog.getDialogPane().setContent(content);
+        dialog.showAndWait();
+    }
+
+    @FXML
+    public void handleShowReaderQrCard() {
+        if (selectedReader == null) {
+            showAlert("Thông báo", "Vui lòng chọn một độc giả từ bảng để xem thẻ QR!");
+            return;
+        }
+
+        String qrPayload = "READER:" + selectedReader.getReaderId() + ":" + selectedReader.getFullName();
+        Image qrImage = QRCodeUtils.generateQRCode(qrPayload, 200, 200);
+
+        Alert dialog = new Alert(Alert.AlertType.INFORMATION);
+        dialog.setTitle("Thẻ Độc Giả Điện Tử");
+        dialog.setHeaderText("THẺ ĐỘC GIẢ THƯ VIỆN #" + selectedReader.getReaderId());
+
+        VBox card = new VBox(10);
+        card.setAlignment(Pos.CENTER);
+        card.setPadding(new Insets(15));
+        card.setStyle("-fx-background-color: #f8fafc; -fx-border-color: #cbd5e1; -fx-border-radius: 8px; -fx-background-radius: 8px;");
+
+        if (qrImage != null) {
+            ImageView imgView = new ImageView(qrImage);
+            imgView.setFitWidth(180);
+            imgView.setFitHeight(180);
+            card.getChildren().add(imgView);
+        }
+
+        Label lblName = new Label("👤 " + selectedReader.getFullName());
+        lblName.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #1e3c72;");
+
+        Label lblDetails = new Label("• Mã độc giả: " + selectedReader.getReaderId() +
+                "\n• Điện thoại: " + selectedReader.getPhone() +
+                "\n• Email: " + selectedReader.getEmail() +
+                "\n• Trạng thái thẻ: " + selectedReader.getCardStatus());
+        lblDetails.setStyle("-fx-font-size: 12px; -fx-text-fill: #334155;");
+
+        card.getChildren().addAll(lblName, lblDetails);
+        dialog.getDialogPane().setContent(card);
+        dialog.showAndWait();
+    }
+
+    @FXML
+    public void handleQuickScan() {
+        if (txtQuickScan == null) return;
+        String raw = txtQuickScan.getText().trim();
+        if (raw.isEmpty()) return;
+
+        txtQuickScan.clear();
+
+        // 1. Check if raw is a READER QR: "READER:<id>:<name>"
+        if (raw.toUpperCase().startsWith("READER:")) {
+            String[] parts = raw.split(":");
+            if (parts.length >= 2) {
+                String rId = parts[1].trim();
+                txtBorrowReaderId.setText(rId);
+                showLiveToast("⚡ Đã quét Thẻ Độc giả #" + rId + (parts.length >= 3 ? " (" + parts[2] + ")" : ""));
+                return;
+            }
+        }
+
+        // 2. Check if raw is a BOOK QR: "BOOK:<id>:<isbn>:<title>"
+        if (raw.toUpperCase().startsWith("BOOK:")) {
+            String[] parts = raw.split(":");
+            if (parts.length >= 2) {
+                String bId = parts[1].trim();
+                appendBookIdToBorrowList(bId);
+                showLiveToast("⚡ Đã quét Sách #" + bId + (parts.length >= 4 ? " (" + parts[3] + ")" : ""));
+                return;
+            }
+        }
+
+        // 3. Numeric ID check: match Book ID first, then Reader ID
+        try {
+            int numericId = Integer.parseInt(raw);
+            Book matchedBook = allBooksList.stream().filter(b -> b.getBookId() == numericId).findFirst().orElse(null);
+            if (matchedBook != null) {
+                appendBookIdToBorrowList(String.valueOf(matchedBook.getBookId()));
+                showLiveToast("⚡ Đã tìm thấy sách: " + matchedBook.getTitle());
+                return;
+            }
+
+            Reader matchedReader = allReadersList.stream().filter(r -> r.getReaderId() == numericId).findFirst().orElse(null);
+            if (matchedReader != null) {
+                txtBorrowReaderId.setText(String.valueOf(matchedReader.getReaderId()));
+                showLiveToast("⚡ Đã tìm thấy độc giả: " + matchedReader.getFullName());
+                return;
+            }
+        } catch (NumberFormatException ignored) {}
+
+        // 4. Match by ISBN
+        Book bookByIsbn = allBooksList.stream()
+                .filter(b -> b.getIsbn() != null && b.getIsbn().equalsIgnoreCase(raw))
+                .findFirst().orElse(null);
+        if (bookByIsbn != null) {
+            appendBookIdToBorrowList(String.valueOf(bookByIsbn.getBookId()));
+            showLiveToast("⚡ Đã nhận diện ISBN " + raw + " ➔ " + bookByIsbn.getTitle());
+            return;
+        }
+
+        showAlert("Không nhận diện được mã", "Không tìm thấy Sách hoặc Độc giả tương ứng với mã:\n" + raw);
+    }
+
+    private void appendBookIdToBorrowList(String bookId) {
+        String current = txtBorrowBookIds.getText().trim();
+        if (current.isEmpty()) {
+            txtBorrowBookIds.setText(bookId);
+        } else {
+            List<String> ids = new ArrayList<>(Arrays.asList(current.split("\\s*,\\s*")));
+            if (!ids.contains(bookId)) {
+                ids.add(bookId);
+                txtBorrowBookIds.setText(String.join(",", ids));
+            }
         }
     }
 
