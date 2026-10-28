@@ -331,5 +331,43 @@ public class LibraryServiceTest {
         Response delRes = service.handleRequest(delReq);
         assertEquals("SUCCESS", delRes.getStatus());
     }
+
+    @Test
+    @DisplayName("Test Live Chat Broadcast and History Lifecycle")
+    public void testLiveChatBroadcastAndHistory() {
+        // 1. Send valid chat message
+        Map<String, Object> chatMsg = new HashMap<>();
+        chatMsg.put("sender", "admin");
+        chatMsg.put("senderName", "Quản Trị Viên");
+        chatMsg.put("senderRole", "ADMIN");
+        chatMsg.put("message", "Xin chào toàn thể thủ thư ca trực sáng!");
+        chatMsg.put("type", "CHAT");
+
+        Request sendReq = new Request("SEND_CHAT_MESSAGE", chatMsg);
+        Response sendRes = service.handleRequest(sendReq);
+        assertEquals("SUCCESS", sendRes.getStatus());
+        assertNotNull(sendRes.getData());
+
+        // 2. Fetch history
+        Request histReq = new Request("GET_CHAT_HISTORY", null);
+        Response histRes = service.handleRequest(histReq);
+        assertEquals("SUCCESS", histRes.getStatus());
+        List<?> messages = (List<?>) histRes.getData();
+        assertNotNull(messages);
+        assertFalse(messages.isEmpty());
+
+        // 3. Send empty chat message should fail
+        Map<String, Object> emptyMsg = new HashMap<>();
+        emptyMsg.put("message", "   ");
+        Request emptyReq = new Request("SEND_CHAT_MESSAGE", emptyMsg);
+        Response emptyRes = service.handleRequest(emptyReq);
+        assertEquals("ERROR", emptyRes.getStatus());
+
+        // 4. Clear chat history
+        Request clearReq = new Request("CLEAR_CHAT_HISTORY", null);
+        Response clearRes = service.handleRequest(clearReq);
+        assertEquals("SUCCESS", clearRes.getStatus());
+    }
 }
+
 

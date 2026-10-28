@@ -7,6 +7,7 @@ import com.library.common.protocol.NetworkUtils;
 import com.library.common.protocol.Request;
 import com.library.common.protocol.Response;
 import com.library.server.dao.InMemoryStore;
+import com.library.server.net.ChatManager;
 import com.library.server.net.ClientSessionManager;
 
 import java.time.LocalDate;
@@ -84,6 +85,15 @@ public class LibraryService {
                     return handleResetPassword(data);
                 case "DELETE_USER":
                     return handleDeleteUser(data);
+                case "REGISTER_CHAT_LISTENER":
+                    return Response.success("Đã đăng ký kênh Chat Listener", null);
+                case "SEND_CHAT_MESSAGE":
+                    return handleSendChatMessage(data);
+                case "GET_CHAT_HISTORY":
+                    return Response.success("Lấy lịch sử trò chuyện thành công", ChatManager.getHistory());
+                case "CLEAR_CHAT_HISTORY":
+                    ChatManager.clearHistory();
+                    return Response.success("Đã xóa lịch sử trò chuyện", null);
                 default:
                     return Response.error("Hành động không được hỗ trợ: " + action);
             }
@@ -624,5 +634,30 @@ public class LibraryService {
             return Response.success("Đã xóa tài khoản thành công!", userId);
         }
         return Response.error("Không tìm thấy người dùng để xóa.");
+    }
+
+    private Response handleSendChatMessage(Object data) {
+        if (data == null) {
+            return Response.error("Dữ liệu tin nhắn rỗng.");
+        }
+        Map<?, ?> map = mapper.convertValue(data, Map.class);
+        String sender = (String) map.get("sender");
+        String senderName = (String) map.get("senderName");
+        String senderRole = (String) map.get("senderRole");
+        String message = (String) map.get("message");
+        String type = (String) map.get("type");
+
+        if (message == null || message.trim().isEmpty()) {
+            return Response.error("Nội dung tin nhắn không được để trống.");
+        }
+
+        if (sender == null) sender = "Unknown";
+        if (senderName == null) senderName = sender;
+        if (senderRole == null) senderRole = "STAFF";
+        if (type == null) type = "CHAT";
+
+        ChatMessage chatMsg = new ChatMessage(sender, senderName, senderRole, message.trim(), type);
+        ChatManager.broadcast(chatMsg);
+        return Response.success("Gửi tin nhắn thành công", chatMsg);
     }
 }

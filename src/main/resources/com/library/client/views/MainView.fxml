@@ -37,6 +37,7 @@
                 <Button fx:id="btnNavFines" maxWidth="1.7976931348623157E308" onAction="#showFines" styleClass="sidebar-btn" text="💰 Quản lý Tiền phạt" />
                 <Button fx:id="btnNavNetwork" maxWidth="1.7976931348623157E308" onAction="#showNetwork" styleClass="sidebar-btn" text="🌐 Giám sát Mạng" />
                 <Button fx:id="btnNavUsers" maxWidth="1.7976931348623157E308" onAction="#showUsers" styleClass="sidebar-btn" text="👥 Quản lý Tài khoản" />
+                <Button fx:id="btnNavChat" maxWidth="1.7976931348623157E308" onAction="#showChat" styleClass="sidebar-btn" text="💬 Trò chuyện Nội bộ" />
             </children>
         </VBox>
     </left>
@@ -512,6 +513,43 @@
                             </VBox>
                         </children>
                     </HBox>
+                </children>
+            </VBox>
+
+            <!-- Internal Live Chat View -->
+            <VBox fx:id="viewChat" spacing="15.0" visible="false">
+                <children>
+                    <HBox alignment="CENTER_LEFT" spacing="10.0">
+                        <children>
+                            <Label text="💬 Kênh Trao đổi Nội bộ Thủ thư &amp; Quản trị" textFill="#2c3e50">
+                                <font>
+                                    <Font name="System Bold" size="20.0" />
+                                </font>
+                            </Label>
+                            <Region HBox.hgrow="ALWAYS" />
+                            <Label fx:id="lblChatStatus" style="-fx-background-color: #e8f8f5; -fx-text-fill: #1abc9c; -fx-padding: 4 10; -fx-background-radius: 12; -fx-font-weight: bold;" text="🟢 Đang kết nối trực tiếp" />
+                            <Button fx:id="btnClearChat" onAction="#handleClearChat" styleClass="btn-danger" text="🗑 Xóa lịch sử" />
+                        </children>
+                    </HBox>
+
+                    <!-- Main Chat Container -->
+                    <VBox spacing="10.0" styleClass="card" VBox.vgrow="ALWAYS">
+                        <children>
+                            <ScrollPane fx:id="scrollChat" fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED" VBox.vgrow="ALWAYS" styleClass="content-scrollpane">
+                                <content>
+                                    <VBox fx:id="vboxChatMessages" spacing="12.0" style="-fx-padding: 10;" />
+                                </content>
+                            </ScrollPane>
+
+                            <!-- Input Bar -->
+                            <HBox alignment="CENTER" spacing="10.0" style="-fx-padding: 10 0 0 0; -fx-border-color: #edf2f7; -fx-border-width: 1 0 0 0;">
+                                <children>
+                                    <TextField fx:id="txtChatMessage" onAction="#handleSendChat" promptText="Nhập tin nhắn trao đổi với các thủ thư... (Nhấn Enter hoặc bấm nút Gửi)" HBox.hgrow="ALWAYS" style="-fx-font-size: 13px; -fx-pref-height: 40px;" />
+                                    <Button fx:id="btnSendChat" onAction="#handleSendChat" styleClass="btn-primary" text="Gửi ✈" style="-fx-pref-height: 40px; -fx-font-weight: bold; -fx-pref-width: 90px;" />
+                                </children>
+                            </HBox>
+                        </children>
+                    </VBox>
                 </children>
             </VBox>
         </StackPane>

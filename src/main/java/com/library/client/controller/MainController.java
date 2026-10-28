@@ -1,19 +1,17 @@
 package com.library.client.controller;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.library.client.net.ChatClientListener;
 import com.library.client.net.SocketClient;
-import com.library.common.model.Book;
-import com.library.common.model.Borrowing;
-import com.library.common.model.ClientSession;
-import com.library.common.model.Fine;
-import com.library.common.model.Reader;
-import com.library.common.model.User;
+import com.library.common.model.*;
 import com.library.common.protocol.Request;
 import com.library.common.protocol.Response;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.chart.BarChart;
@@ -23,6 +21,7 @@ import javafx.scene.chart.PieChart;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
@@ -50,6 +49,7 @@ public class MainController {
     @FXML private Button btnNavFines;
     @FXML private Button btnNavNetwork;
     @FXML private Button btnNavUsers;
+    @FXML private Button btnNavChat;
 
     // Main Content Area & Views
     @FXML private StackPane contentArea;
@@ -60,6 +60,16 @@ public class MainController {
     @FXML private VBox viewFines;
     @FXML private VBox viewNetwork;
     @FXML private VBox viewUsers;
+    @FXML private VBox viewChat;
+
+    // Live Chat Module
+    @FXML private Label lblChatStatus;
+    @FXML private Button btnClearChat;
+    @FXML private ScrollPane scrollChat;
+    @FXML private VBox vboxChatMessages;
+    @FXML private TextField txtChatMessage;
+    @FXML private Button btnSendChat;
+    private int unreadChatCount = 0;
 
     // Dashboard Metrics & Charts
     @FXML private Label lblStatTotalBooks;
@@ -189,9 +199,32 @@ public class MainController {
             btnNavNetwork.setManaged(false);
             btnNavUsers.setVisible(false);
             btnNavUsers.setManaged(false);
+            if (btnClearChat != null) {
+                btnClearChat.setVisible(false);
+                btnClearChat.setManaged(false);
+            }
         }
         setupTableColumns();
+        setupChatListener();
         showDashboard();
+    }
+
+    private void setupChatListener() {
+        if (currentUser == null) return;
+        ChatClientListener chatListener = ChatClientListener.getInstance();
+        chatListener.addMessageListener(this::onChatMessageReceived);
+        chatListener.start(socketClient.getServerHost(), socketClient.getServerPort(), currentUser.getUsername());
+    }
+
+    private void onChatMessageReceived(ChatMessage msg) {
+        if (msg == null) return;
+        renderChatMessage(msg);
+        if (viewChat != null && !viewChat.isVisible()) {
+            unreadChatCount++;
+            if (btnNavChat != null) {
+                btnNavChat.setText("💬 Trò chuyện Nội bộ (" + unreadChatCount + ")");
+            }
+        }
     }
 
     private void setupTableColumns() {
@@ -295,6 +328,7 @@ public class MainController {
         btnNavFines.getStyleClass().remove("sidebar-btn-active");
         btnNavNetwork.getStyleClass().remove("sidebar-btn-active");
         btnNavUsers.getStyleClass().remove("sidebar-btn-active");
+        if (btnNavChat != null) btnNavChat.getStyleClass().remove("sidebar-btn-active");
 
         activeButton.getStyleClass().add("sidebar-btn-active");
 
@@ -305,8 +339,23 @@ public class MainController {
         viewFines.setVisible(false);
         viewNetwork.setVisible(false);
         viewUsers.setVisible(false);
+        if (viewChat != null) viewChat.setVisible(false);
 
         activeView.setVisible(true);
+    }
+
+    @FXML
+    public void showChat() {
+        setActiveNav(btnNavChat, viewChat);
+        unreadChatCount = 0;
+        if (btnNavChat != null) {
+            btnNavChat.setText("💬 Trò chuyện Nội bộ");
+        }
+        loadChatHistory();
+        Platform.runLater(() -> {
+            if (txtChatMessage != null) txtChatMessage.requestFocus();
+            if (scrollChat != null) scrollChat.setVvalue(1.0);
+        });
     }
 
     @FXML
@@ -1025,6 +1074,7 @@ public class MainController {
 
     @FXML
     public void handleLogout() {
+        ChatClientListener.getInstance().stop();
         socketClient.disconnect();
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/library/client/views/LoginView.fxml"));
@@ -1039,6 +1089,150 @@ public class MainController {
             stage.centerOnScreen();
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    @FXML
+    public void handleSendChat() {
+        if (txtChatMessage == null) return;
+        String text = txtChatMessage.getText().trim();
+        if (text.isEmpty()) return;
+
+        txtChatMessage.clear();
+
+        String sender = currentUser != null ? currentUser.getUsername() : "User";
+        String senderName = currentUser != null ? currentUser.getFullName() : "Nhân viên";
+        String senderRole = currentUser != null ? currentUser.getRole() : "STAFF";
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("sender", sender);
+        data.put("senderName", senderName);
+        data.put("senderRole", senderRole);
+        data.put("message", text);
+        data.put("type", "CHAT");
+
+        new Thread(() -> {
+            try {
+                Response resp = socketClient.sendRequest(new Request("SEND_CHAT_MESSAGE", data));
+                if (!"SUCCESS".equals(resp.getStatus())) {
+                    Platform.runLater(() -> showAlert("Lỗi gửi tin", resp.getMessage()));
+                }
+            } catch (IOException e) {
+                Platform.runLater(() -> showAlert("Lỗi mạng", "Không thể gửi tin nhắn: " + e.getMessage()));
+            }
+        }, "SendChat-Thread").start();
+    }
+
+    @FXML
+    public void handleClearChat() {
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Xác nhận");
+        confirm.setHeaderText("Xóa toàn bộ lịch sử trò chuyện nội bộ?");
+        confirm.setContentText("Hành động này sẽ làm sạch màn hình trò chuyện của tất cả người dùng!");
+        Optional<ButtonType> result = confirm.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            try {
+                Response resp = socketClient.sendRequest(new Request("CLEAR_CHAT_HISTORY", null));
+                if ("SUCCESS".equals(resp.getStatus())) {
+                    if (vboxChatMessages != null) vboxChatMessages.getChildren().clear();
+                } else {
+                    showAlert("Lỗi", resp.getMessage());
+                }
+            } catch (IOException e) {
+                showAlert("Lỗi mạng", e.getMessage());
+            }
+        }
+    }
+
+    private void loadChatHistory() {
+        try {
+            Response resp = socketClient.sendRequest(new Request("GET_CHAT_HISTORY", null));
+            if ("SUCCESS".equals(resp.getStatus()) && resp.getData() != null) {
+                List<ChatMessage> list = socketClient.convertData(resp.getData(), new TypeReference<List<ChatMessage>>() {});
+                if (vboxChatMessages != null) {
+                    vboxChatMessages.getChildren().clear();
+                    for (ChatMessage msg : list) {
+                        renderChatMessage(msg);
+                    }
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Không thể tải lịch sử chat: " + e.getMessage());
+        }
+    }
+
+    private void renderChatMessage(ChatMessage msg) {
+        if (vboxChatMessages == null) return;
+
+        boolean isSelf = currentUser != null && currentUser.getUsername() != null
+                && currentUser.getUsername().equalsIgnoreCase(msg.getSender());
+        boolean isSystem = "SYSTEM".equalsIgnoreCase(msg.getType());
+
+        HBox row = new HBox();
+        row.setFillHeight(false);
+
+        if (isSystem) {
+            row.setAlignment(Pos.CENTER);
+            Label lbl = new Label("🔔 " + msg.getMessage() + " (" + msg.getTimestamp() + ")");
+            lbl.getStyleClass().add("chat-bubble-system");
+            lbl.setWrapText(true);
+            lbl.setMaxWidth(600);
+            row.getChildren().add(lbl);
+        } else if (isSelf) {
+            row.setAlignment(Pos.CENTER_RIGHT);
+            VBox bubble = new VBox(3);
+            bubble.getStyleClass().add("chat-bubble-self");
+            bubble.setMaxWidth(500);
+
+            Label lblMsg = new Label(msg.getMessage());
+            lblMsg.setStyle("-fx-text-fill: white; -fx-font-size: 13px;");
+            lblMsg.setWrapText(true);
+
+            Label lblTime = new Label(msg.getTimestamp());
+            lblTime.setStyle("-fx-text-fill: rgba(255,255,255,0.7); -fx-font-size: 10px;");
+            lblTime.setMaxWidth(Double.MAX_VALUE);
+            lblTime.setAlignment(Pos.CENTER_RIGHT);
+
+            bubble.getChildren().addAll(lblMsg, lblTime);
+            row.getChildren().add(bubble);
+        } else {
+            row.setAlignment(Pos.CENTER_LEFT);
+            row.setSpacing(8);
+
+            String initial = (msg.getSenderName() != null && !msg.getSenderName().isEmpty())
+                    ? msg.getSenderName().substring(0, 1).toUpperCase() : "?";
+            Label avatar = new Label(initial);
+            avatar.setStyle("-fx-background-color: #34495e; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 12px; -fx-min-width: 32px; -fx-min-height: 32px; -fx-max-width: 32px; -fx-max-height: 32px; -fx-alignment: center; -fx-background-radius: 16px;");
+
+            VBox bubble = new VBox(3);
+            bubble.getStyleClass().add("chat-bubble-other");
+            bubble.setMaxWidth(500);
+
+            HBox header = new HBox(6);
+            header.setAlignment(Pos.CENTER_LEFT);
+            Label lblName = new Label(msg.getSenderName() != null ? msg.getSenderName() : msg.getSender());
+            lblName.setStyle("-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: #2c3e50;");
+
+            Label lblRole = new Label(msg.getSenderRole() != null ? msg.getSenderRole() : "STAFF");
+            lblRole.setStyle("-fx-background-color: " + ("ADMIN".equalsIgnoreCase(msg.getSenderRole()) ? "#e74c3c" : "#3498db") + "; -fx-text-fill: white; -fx-font-size: 9px; -fx-padding: 1 5; -fx-background-radius: 4; -fx-font-weight: bold;");
+
+            Label lblTime = new Label(msg.getTimestamp());
+            lblTime.setStyle("-fx-text-fill: #95a5a6; -fx-font-size: 10px;");
+
+            header.getChildren().addAll(lblName, lblRole, lblTime);
+
+            Label lblMsg = new Label(msg.getMessage());
+            lblMsg.setStyle("-fx-text-fill: #2c3e50; -fx-font-size: 13px;");
+            lblMsg.setWrapText(true);
+
+            bubble.getChildren().addAll(header, lblMsg);
+            row.getChildren().addAll(avatar, bubble);
+        }
+
+        vboxChatMessages.getChildren().add(row);
+        if (scrollChat != null) {
+            scrollChat.layout();
+            scrollChat.setVvalue(1.0);
         }
     }
 

@@ -76,4 +76,12 @@ public class SocketClient {
         } catch (IOException ignored) {}
         connected = false;
     }
+
+    public String getServerHost() {
+        return serverHost;
+    }
+
+    public int getServerPort() {
+        return serverPort;
+    }
 }

@@ -73,11 +73,18 @@ public class ClientHandler implements Runnable {
                     } catch (Exception ignored) {}
                 }
 
+                if ("REGISTER_CHAT_LISTENER".equals(request.getAction())) {
+                    String username = request.getData() != null ? request.getData().toString() : "Anonymous";
+                    ChatManager.registerListener(sessionId, username, dos);
+                    ClientSessionManager.updateUser(sessionId, username, "Chat Listener (" + username + ")", "STAFF");
+                }
+
                 NetworkUtils.sendJson(dos, response);
             }
         } catch (IOException e) {
             System.out.println("Client ngắt kết nối [" + sessionId + "]: " + clientAddress);
         } finally {
+            ChatManager.unregisterListener(sessionId);
             ClientSessionManager.unregister(sessionId);
             disconnect();
         }
