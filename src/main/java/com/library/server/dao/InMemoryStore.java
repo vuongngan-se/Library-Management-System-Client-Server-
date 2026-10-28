@@ -400,6 +400,126 @@ public class InMemoryStore {
         return true;
     }
 
+    public static List<User> getAllUsers() {
+        if (!DatabaseConfig.isInMemoryMode()) {
+            List<User> list = new ArrayList<>();
+            try (Connection conn = DatabaseConfig.getConnection()) {
+                if (conn != null) {
+                    String sql = "SELECT user_id, username, full_name, role, status FROM users ORDER BY user_id ASC";
+                    PreparedStatement ps = conn.prepareStatement(sql);
+                    ResultSet rs = ps.executeQuery();
+                    while (rs.next()) {
+                        list.add(new User(
+                                rs.getInt("user_id"),
+                                rs.getString("username"),
+                                null,
+                                rs.getString("full_name"),
+                                rs.getString("role"),
+                                rs.getString("status")
+                        ));
+                    }
+                    if (!list.isEmpty()) {
+                        return list;
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        List<User> list = new ArrayList<>();
+        for (User u : users.values()) {
+            list.add(new User(
+                    u.getUserId(),
+                    u.getUsername(),
+                    null,
+                    u.getFullName(),
+                    u.getRole(),
+                    u.getStatus()
+            ));
+        }
+        list.sort(Comparator.comparingInt(User::getUserId));
+        return list;
+    }
+
+    public static boolean updateUser(User user) {
+        if (!DatabaseConfig.isInMemoryMode()) {
+            try (Connection conn = DatabaseConfig.getConnection()) {
+                if (conn != null) {
+                    String sql;
+                    PreparedStatement ps;
+                    if (user.getPassword() != null && !user.getPassword().trim().isEmpty()) {
+                        sql = "UPDATE users SET full_name = ?, role = ?, status = ?, password = ? WHERE user_id = ?";
+                        ps = conn.prepareStatement(sql);
+                        ps.setString(1, user.getFullName());
+                        ps.setString(2, user.getRole());
+                        ps.setString(3, user.getStatus());
+                        ps.setString(4, user.getPassword());
+                        ps.setInt(5, user.getUserId());
+                    } else {
+                        sql = "UPDATE users SET full_name = ?, role = ?, status = ? WHERE user_id = ?";
+                        ps = conn.prepareStatement(sql);
+                        ps.setString(1, user.getFullName());
+                        ps.setString(2, user.getRole());
+                        ps.setString(3, user.getStatus());
+                        ps.setInt(4, user.getUserId());
+                    }
+                    ps.executeUpdate();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        User existing = users.get(user.getUserId());
+        if (existing != null) {
+            existing.setFullName(user.getFullName());
+            existing.setRole(user.getRole());
+            existing.setStatus(user.getStatus());
+            if (user.getPassword() != null && !user.getPassword().trim().isEmpty()) {
+                existing.setPassword(user.getPassword());
+            }
+            return true;
+        }
+        return false;
+    }
+
+    public static boolean resetPassword(int userId, String newPassword) {
+        if (!DatabaseConfig.isInMemoryMode()) {
+            try (Connection conn = DatabaseConfig.getConnection()) {
+                if (conn != null) {
+                    String sql = "UPDATE users SET password = ? WHERE user_id = ?";
+                    PreparedStatement ps = conn.prepareStatement(sql);
+                    ps.setString(1, newPassword);
+                    ps.setInt(2, userId);
+                    ps.executeUpdate();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        User u = users.get(userId);
+        if (u != null) {
+            u.setPassword(newPassword);
+            return true;
+        }
+        return false;
+    }
+
+    public static boolean deleteUser(int userId) {
+        if (!DatabaseConfig.isInMemoryMode()) {
+            try (Connection conn = DatabaseConfig.getConnection()) {
+                if (conn != null) {
+                    String sql = "DELETE FROM users WHERE user_id = ?";
+                    PreparedStatement ps = conn.prepareStatement(sql);
+                    ps.setInt(1, userId);
+                    ps.executeUpdate();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        return users.remove(userId) != null;
+    }
+
     public static List<Book> getAllBooks() {
         if (!DatabaseConfig.isInMemoryMode()) {
             List<Book> list = new ArrayList<>();

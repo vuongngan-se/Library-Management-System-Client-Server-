@@ -74,6 +74,16 @@ public class LibraryService {
                     return handleGetActiveSessions();
                 case "KICK_SESSION":
                     return handleKickSession(data);
+                case "GET_USERS":
+                    return Response.success("Lấy danh sách người dùng thành công", InMemoryStore.getAllUsers());
+                case "ADD_USER":
+                    return handleAddUser(data);
+                case "UPDATE_USER":
+                    return handleUpdateUser(data);
+                case "RESET_PASSWORD":
+                    return handleResetPassword(data);
+                case "DELETE_USER":
+                    return handleDeleteUser(data);
                 default:
                     return Response.error("Hành động không được hỗ trợ: " + action);
             }
@@ -520,5 +530,99 @@ public class LibraryService {
         } else {
             return Response.error("Không tìm thấy phiên kết nối đang mở với mã: " + sessionId);
         }
+    }
+
+    private Response handleAddUser(Object data) {
+        User user = mapper.convertValue(data, User.class);
+        if (user.getUsername() == null || user.getUsername().trim().length() < 3) {
+            return Response.error("Tên đăng nhập phải có ít nhất 3 ký tự.");
+        }
+        if (user.getPassword() == null || user.getPassword().trim().length() < 4) {
+            return Response.error("Mật khẩu phải có ít nhất 4 ký tự.");
+        }
+        if (user.getFullName() == null || user.getFullName().trim().isEmpty()) {
+            return Response.error("Họ và tên không được để trống.");
+        }
+
+        User existing = InMemoryStore.findUserByUsername(user.getUsername().trim());
+        if (existing != null) {
+            return Response.error("Tên đăng nhập '" + user.getUsername() + "' đã tồn tại!");
+        }
+
+        if (user.getRole() == null || user.getRole().trim().isEmpty()) {
+            user.setRole("STAFF");
+        }
+        if (user.getStatus() == null || user.getStatus().trim().isEmpty()) {
+            user.setStatus("ACTIVE");
+        }
+
+        boolean ok = InMemoryStore.registerUser(user);
+        if (ok) {
+            User safe = new User(user.getUserId(), user.getUsername(), null, user.getFullName(), user.getRole(), user.getStatus());
+            return Response.success("Tạo tài khoản người dùng thành công!", safe);
+        }
+        return Response.error("Không thể tạo tài khoản trên máy chủ.");
+    }
+
+    private Response handleUpdateUser(Object data) {
+        User user = mapper.convertValue(data, User.class);
+        if (user.getUserId() <= 0) {
+            return Response.error("Mã người dùng không hợp lệ.");
+        }
+        if (user.getFullName() == null || user.getFullName().trim().isEmpty()) {
+            return Response.error("Họ và tên không được để trống.");
+        }
+
+        boolean ok = InMemoryStore.updateUser(user);
+        if (ok) {
+            return Response.success("Cập nhật thông tin tài khoản thành công!", user);
+        }
+        return Response.error("Không tìm thấy người dùng để cập nhật.");
+    }
+
+    private Response handleResetPassword(Object data) {
+        Map<?, ?> map = mapper.convertValue(data, Map.class);
+        Object uidObj = map.get("userId");
+        Object passObj = map.get("newPassword");
+        if (uidObj == null || passObj == null) {
+            return Response.error("Mã người dùng và mật khẩu mới không được để trống.");
+        }
+        int userId = Integer.parseInt(uidObj.toString());
+        String newPassword = passObj.toString().trim();
+        if (newPassword.length() < 4) {
+            return Response.error("Mật khẩu mới phải có ít nhất 4 ký tự.");
+        }
+
+        boolean ok = InMemoryStore.resetPassword(userId, newPassword);
+        if (ok) {
+            return Response.success("Đổi mật khẩu người dùng thành công!", userId);
+        }
+        return Response.error("Không tìm thấy người dùng để đổi mật khẩu.");
+    }
+
+    private Response handleDeleteUser(Object data) {
+        int userId = 0;
+        if (data instanceof Integer) {
+            userId = (Integer) data;
+        } else if (data instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) data;
+            Object idObj = map.get("userId");
+            if (idObj != null) userId = Integer.parseInt(idObj.toString());
+        } else if (data != null) {
+            userId = Integer.parseInt(data.toString());
+        }
+
+        if (userId <= 0) {
+            return Response.error("Mã người dùng không hợp lệ.");
+        }
+        if (userId == 1) {
+            return Response.error("Không thể xóa tài khoản Quản trị viên gốc (admin)!");
+        }
+
+        boolean ok = InMemoryStore.deleteUser(userId);
+        if (ok) {
+            return Response.success("Đã xóa tài khoản thành công!", userId);
+        }
+        return Response.error("Không tìm thấy người dùng để xóa.");
     }
 }

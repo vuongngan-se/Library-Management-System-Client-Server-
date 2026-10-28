@@ -1,6 +1,7 @@
 package com.library.server.service;
 
 import com.library.common.model.Book;
+import com.library.common.model.User;
 import com.library.common.protocol.Request;
 import com.library.common.protocol.Response;
 import com.library.server.net.ClientSessionManager;
@@ -280,6 +281,55 @@ public class LibraryServiceTest {
         Request kickInvalid = new Request("KICK_SESSION", "NON-EXISTENT");
         Response invalidRes = service.handleRequest(kickInvalid);
         assertEquals("ERROR", invalidRes.getStatus());
+    }
+
+    @Test
+    @DisplayName("Test User Management Lifecycle (CRUD, Reset Password, Role check)")
+    public void testUserManagementLifecycle() {
+        // 1. Get all users
+        Request getReq = new Request("GET_USERS", null);
+        Response getRes = service.handleRequest(getReq);
+        assertEquals("SUCCESS", getRes.getStatus());
+        assertTrue(getRes.getData() instanceof List);
+        List<?> userList = (List<?>) getRes.getData();
+        assertTrue(userList.size() >= 5);
+
+        // 2. Add new user
+        User newUser = new User(0, "staff_crud", "pass1234", "Thủ thư Thử nghiệm", "STAFF", "ACTIVE");
+        Request addReq = new Request("ADD_USER", newUser);
+        Response addRes = service.handleRequest(addReq);
+        assertEquals("SUCCESS", addRes.getStatus());
+        Map<?, ?> createdMap = (Map<?, ?>) com.library.common.protocol.NetworkUtils.getMapper().convertValue(addRes.getData(), Map.class);
+        int createdId = Integer.parseInt(createdMap.get("userId").toString());
+        assertTrue(createdId > 0);
+
+        // 3. Test duplicate add fails
+        Response dupRes = service.handleRequest(addReq);
+        assertEquals("ERROR", dupRes.getStatus());
+
+        // 4. Update user
+        User toUpdate = new User(createdId, "staff_crud", null, "Thủ thư Cập nhật", "ADMIN", "LOCKED");
+        Request updateReq = new Request("UPDATE_USER", toUpdate);
+        Response updateRes = service.handleRequest(updateReq);
+        assertEquals("SUCCESS", updateRes.getStatus());
+
+        // 5. Reset password
+        Map<String, Object> resetData = new HashMap<>();
+        resetData.put("userId", createdId);
+        resetData.put("newPassword", "newpass999");
+        Request resetReq = new Request("RESET_PASSWORD", resetData);
+        Response resetRes = service.handleRequest(resetReq);
+        assertEquals("SUCCESS", resetRes.getStatus());
+
+        // 6. Delete user 1 (root admin) should fail
+        Request delAdminReq = new Request("DELETE_USER", 1);
+        Response delAdminRes = service.handleRequest(delAdminReq);
+        assertEquals("ERROR", delAdminRes.getStatus());
+
+        // 7. Delete created user
+        Request delReq = new Request("DELETE_USER", createdId);
+        Response delRes = service.handleRequest(delReq);
+        assertEquals("SUCCESS", delRes.getStatus());
     }
 }
 

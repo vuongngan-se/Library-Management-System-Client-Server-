@@ -36,6 +36,7 @@
                 <Button fx:id="btnNavBorrow" maxWidth="1.7976931348623157E308" onAction="#showBorrow" styleClass="sidebar-btn" text="🔄 Mượn &amp; Trả sách" />
                 <Button fx:id="btnNavFines" maxWidth="1.7976931348623157E308" onAction="#showFines" styleClass="sidebar-btn" text="💰 Quản lý Tiền phạt" />
                 <Button fx:id="btnNavNetwork" maxWidth="1.7976931348623157E308" onAction="#showNetwork" styleClass="sidebar-btn" text="🌐 Giám sát Mạng" />
+                <Button fx:id="btnNavUsers" maxWidth="1.7976931348623157E308" onAction="#showUsers" styleClass="sidebar-btn" text="👥 Quản lý Tài khoản" />
             </children>
         </VBox>
     </left>
@@ -448,6 +449,69 @@
                             </TableView>
                         </children>
                     </VBox>
+                </children>
+            </VBox>
+
+            <!-- Users View -->
+            <VBox fx:id="viewUsers" spacing="15.0" visible="false">
+                <children>
+                    <HBox alignment="CENTER_LEFT" spacing="15.0">
+                        <children>
+                            <Label text="👥 Quản lý Tài khoản &amp; Phân quyền Nhân viên" textFill="#2c3e50">
+                                <font>
+                                    <Font name="System Bold" size="20.0" />
+                                </font>
+                            </Label>
+                            <Region HBox.hgrow="ALWAYS" />
+                            <TextField fx:id="txtSearchUser" prefWidth="250.0" promptText="Tìm theo username, họ tên..." />
+                            <Button onAction="#handleSearchUser" styleClass="btn-primary" text="Tìm kiếm" />
+                            <Button onAction="#handleRefreshUsers" styleClass="btn-secondary" text="🔄 Làm mới" />
+                        </children>
+                    </HBox>
+                    <HBox spacing="20.0" VBox.vgrow="ALWAYS">
+                        <children>
+                            <!-- Table View -->
+                            <TableView fx:id="tblUsers" HBox.hgrow="ALWAYS">
+                                <columns>
+                                    <TableColumn fx:id="colUserId" prefWidth="60.0" text="Mã NV" />
+                                    <TableColumn fx:id="colUserUsername" prefWidth="140.0" text="Tên đăng nhập" />
+                                    <TableColumn fx:id="colUserFullName" prefWidth="180.0" text="Họ và tên" />
+                                    <TableColumn fx:id="colUserRole" prefWidth="100.0" text="Vai trò" />
+                                    <TableColumn fx:id="colUserStatus" prefWidth="110.0" text="Trạng thái" />
+                                </columns>
+                            </TableView>
+
+                            <!-- Form View -->
+                            <VBox prefWidth="320.0" spacing="10.0" styleClass="card">
+                                <children>
+                                    <Label text="Thông tin Tài khoản" textFill="#2c3e50">
+                                        <font>
+                                            <Font name="System Bold" size="14.0" />
+                                        </font>
+                                    </Label>
+                                    <Label text="Tên đăng nhập:" />
+                                    <TextField fx:id="txtUserUsername" promptText="Ví dụ: thuthu_linh" />
+                                    <Label text="Mật khẩu:" />
+                                    <PasswordField fx:id="txtUserPassword" promptText="Mật khẩu (ít nhất 4 ký tự)" />
+                                    <Label text="Họ và tên nhân viên:" />
+                                    <TextField fx:id="txtUserFullName" promptText="Họ và tên đầy đủ" />
+                                    <Label text="Vai trò phân quyền:" />
+                                    <ComboBox fx:id="cbUserRole" maxWidth="Infinity" />
+                                    <Label text="Trạng thái tài khoản:" />
+                                    <ComboBox fx:id="cbUserStatus" maxWidth="Infinity" />
+                                    <Region VBox.vgrow="ALWAYS" />
+                                    <HBox spacing="8.0">
+                                        <children>
+                                            <Button onAction="#handleAddUser" styleClass="btn-success" text="Thêm" HBox.hgrow="ALWAYS" />
+                                            <Button onAction="#handleUpdateUser" styleClass="btn-primary" text="Sửa" HBox.hgrow="ALWAYS" />
+                                            <Button onAction="#handleResetUserPassword" styleClass="btn-info" text="Đổi MK" HBox.hgrow="ALWAYS" />
+                                            <Button onAction="#handleDeleteUser" styleClass="btn-danger" text="Xóa" HBox.hgrow="ALWAYS" />
+                                        </children>
+                                    </HBox>
+                                </children>
+                            </VBox>
+                        </children>
+                    </HBox>
                 </children>
             </VBox>
         </StackPane>

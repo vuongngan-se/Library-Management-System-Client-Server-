@@ -49,6 +49,7 @@ public class MainController {
     @FXML private Button btnNavBorrow;
     @FXML private Button btnNavFines;
     @FXML private Button btnNavNetwork;
+    @FXML private Button btnNavUsers;
 
     // Main Content Area & Views
     @FXML private StackPane contentArea;
@@ -58,6 +59,7 @@ public class MainController {
     @FXML private VBox viewBorrow;
     @FXML private VBox viewFines;
     @FXML private VBox viewNetwork;
+    @FXML private VBox viewUsers;
 
     // Dashboard Metrics & Charts
     @FXML private Label lblStatTotalBooks;
@@ -142,8 +144,24 @@ public class MainController {
     @FXML private TableColumn<ClientSession, Integer> colSessionRequests;
     @FXML private TableColumn<ClientSession, String> colSessionLastAction;
 
+    // Users Module
+    @FXML private TextField txtSearchUser;
+    @FXML private TableView<User> tblUsers;
+    @FXML private TableColumn<User, Integer> colUserId;
+    @FXML private TableColumn<User, String> colUserUsername;
+    @FXML private TableColumn<User, String> colUserFullName;
+    @FXML private TableColumn<User, String> colUserRole;
+    @FXML private TableColumn<User, String> colUserStatus;
+    @FXML private TextField txtUserUsername;
+    @FXML private PasswordField txtUserPassword;
+    @FXML private TextField txtUserFullName;
+    @FXML private ComboBox<String> cbUserRole;
+    @FXML private ComboBox<String> cbUserStatus;
+
     private Book selectedBook;
     private Reader selectedReader;
+    private User selectedUser;
+    private List<User> allUsersList = new ArrayList<>();
 
     @FXML
     public void initialize() {
@@ -153,6 +171,14 @@ public class MainController {
         if (chartTopBooks != null) {
             chartTopBooks.setAnimated(false);
         }
+        if (cbUserRole != null) {
+            cbUserRole.setItems(FXCollections.observableArrayList("ADMIN", "STAFF"));
+            cbUserRole.getSelectionModel().select("STAFF");
+        }
+        if (cbUserStatus != null) {
+            cbUserStatus.setItems(FXCollections.observableArrayList("ACTIVE", "LOCKED"));
+            cbUserStatus.getSelectionModel().select("ACTIVE");
+        }
     }
 
     public void initUser(User user) {
@@ -161,6 +187,8 @@ public class MainController {
         if (!"ADMIN".equalsIgnoreCase(user.getRole())) {
             btnNavNetwork.setVisible(false);
             btnNavNetwork.setManaged(false);
+            btnNavUsers.setVisible(false);
+            btnNavUsers.setManaged(false);
         }
         setupTableColumns();
         showDashboard();
@@ -238,6 +266,25 @@ public class MainController {
         colSessionConnectedAt.setCellValueFactory(new PropertyValueFactory<>("connectedAt"));
         colSessionRequests.setCellValueFactory(new PropertyValueFactory<>("requestCount"));
         colSessionLastAction.setCellValueFactory(new PropertyValueFactory<>("lastAction"));
+
+        // Users
+        colUserId.setCellValueFactory(new PropertyValueFactory<>("userId"));
+        colUserUsername.setCellValueFactory(new PropertyValueFactory<>("username"));
+        colUserFullName.setCellValueFactory(new PropertyValueFactory<>("fullName"));
+        colUserRole.setCellValueFactory(new PropertyValueFactory<>("role"));
+        colUserStatus.setCellValueFactory(new PropertyValueFactory<>("status"));
+
+        tblUsers.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null) {
+                selectedUser = newVal;
+                txtUserUsername.setText(newVal.getUsername());
+                txtUserUsername.setEditable(false);
+                txtUserPassword.clear();
+                txtUserFullName.setText(newVal.getFullName());
+                cbUserRole.getSelectionModel().select(newVal.getRole());
+                cbUserStatus.getSelectionModel().select(newVal.getStatus());
+            }
+        });
     }
 
     private void setActiveNav(Button activeButton, VBox activeView) {
@@ -247,6 +294,7 @@ public class MainController {
         btnNavBorrow.getStyleClass().remove("sidebar-btn-active");
         btnNavFines.getStyleClass().remove("sidebar-btn-active");
         btnNavNetwork.getStyleClass().remove("sidebar-btn-active");
+        btnNavUsers.getStyleClass().remove("sidebar-btn-active");
 
         activeButton.getStyleClass().add("sidebar-btn-active");
 
@@ -256,6 +304,7 @@ public class MainController {
         viewBorrow.setVisible(false);
         viewFines.setVisible(false);
         viewNetwork.setVisible(false);
+        viewUsers.setVisible(false);
 
         activeView.setVisible(true);
     }
@@ -294,6 +343,187 @@ public class MainController {
     public void showNetwork() {
         setActiveNav(btnNavNetwork, viewNetwork);
         loadNetworkSessions();
+    }
+
+    @FXML
+    public void showUsers() {
+        setActiveNav(btnNavUsers, viewUsers);
+        clearUserForm();
+        loadUsersData();
+    }
+
+    @FXML
+    public void handleRefreshUsers() {
+        loadUsersData();
+    }
+
+    private void clearUserForm() {
+        selectedUser = null;
+        txtUserUsername.setEditable(true);
+        txtUserUsername.clear();
+        txtUserPassword.clear();
+        txtUserFullName.clear();
+        cbUserRole.getSelectionModel().select("STAFF");
+        cbUserStatus.getSelectionModel().select("ACTIVE");
+    }
+
+    private void loadUsersData() {
+        try {
+            Response resp = socketClient.sendRequest(new Request("GET_USERS", null));
+            if ("SUCCESS".equals(resp.getStatus())) {
+                allUsersList = socketClient.convertData(resp.getData(), new TypeReference<List<User>>() {});
+                tblUsers.setItems(FXCollections.observableArrayList(allUsersList));
+            } else {
+                showAlert("Lỗi", resp.getMessage());
+            }
+        } catch (IOException e) {
+            showAlert("Lỗi truyền tin Socket", e.getMessage());
+        }
+    }
+
+    @FXML
+    public void handleSearchUser() {
+        String keyword = txtSearchUser.getText().trim().toLowerCase();
+        if (keyword.isEmpty()) {
+            tblUsers.setItems(FXCollections.observableArrayList(allUsersList));
+            return;
+        }
+        List<User> filtered = new ArrayList<>();
+        for (User u : allUsersList) {
+            if ((u.getUsername() != null && u.getUsername().toLowerCase().contains(keyword)) ||
+                (u.getFullName() != null && u.getFullName().toLowerCase().contains(keyword))) {
+                filtered.add(u);
+            }
+        }
+        tblUsers.setItems(FXCollections.observableArrayList(filtered));
+    }
+
+    @FXML
+    public void handleAddUser() {
+        String username = txtUserUsername.getText().trim();
+        String password = txtUserPassword.getText().trim();
+        String fullName = txtUserFullName.getText().trim();
+        String role = cbUserRole.getValue();
+        String status = cbUserStatus.getValue();
+
+        if (username.length() < 3) {
+            showAlert("Lỗi dữ liệu", "Tên đăng nhập phải có ít nhất 3 ký tự!");
+            return;
+        }
+        if (password.length() < 4) {
+            showAlert("Lỗi dữ liệu", "Mật khẩu tạo mới phải có ít nhất 4 ký tự!");
+            return;
+        }
+        if (fullName.isEmpty()) {
+            showAlert("Lỗi dữ liệu", "Họ và tên nhân viên không được để trống!");
+            return;
+        }
+
+        User u = new User(0, username, password, fullName, role, status);
+        try {
+            Response resp = socketClient.sendRequest(new Request("ADD_USER", u));
+            if ("SUCCESS".equals(resp.getStatus())) {
+                showAlert("Thành công", "Tạo tài khoản người dùng thành công!");
+                clearUserForm();
+                loadUsersData();
+            } else {
+                showAlert("Lỗi", resp.getMessage());
+            }
+        } catch (IOException e) {
+            showAlert("Lỗi kết nối", e.getMessage());
+        }
+    }
+
+    @FXML
+    public void handleUpdateUser() {
+        if (selectedUser == null) {
+            showAlert("Thông báo", "Vui lòng chọn tài khoản nhân viên cần sửa trong bảng!");
+            return;
+        }
+        String fullName = txtUserFullName.getText().trim();
+        String role = cbUserRole.getValue();
+        String status = cbUserStatus.getValue();
+        String password = txtUserPassword.getText().trim();
+
+        if (fullName.isEmpty()) {
+            showAlert("Lỗi dữ liệu", "Họ và tên nhân viên không được để trống!");
+            return;
+        }
+
+        User u = new User(selectedUser.getUserId(), selectedUser.getUsername(), password.isEmpty() ? null : password, fullName, role, status);
+        try {
+            Response resp = socketClient.sendRequest(new Request("UPDATE_USER", u));
+            if ("SUCCESS".equals(resp.getStatus())) {
+                showAlert("Thành công", "Cập nhật thông tin tài khoản thành công!");
+                loadUsersData();
+            } else {
+                showAlert("Lỗi", resp.getMessage());
+            }
+        } catch (IOException e) {
+            showAlert("Lỗi kết nối", e.getMessage());
+        }
+    }
+
+    @FXML
+    public void handleResetUserPassword() {
+        if (selectedUser == null) {
+            showAlert("Thông báo", "Vui lòng chọn tài khoản nhân viên cần đổi mật khẩu!");
+            return;
+        }
+        String newPassword = txtUserPassword.getText().trim();
+        if (newPassword.length() < 4) {
+            showAlert("Lỗi dữ liệu", "Vui lòng nhập mật khẩu mới có ít nhất 4 ký tự vào ô Mật khẩu!");
+            return;
+        }
+
+        Map<String, Object> reqData = new HashMap<>();
+        reqData.put("userId", selectedUser.getUserId());
+        reqData.put("newPassword", newPassword);
+
+        try {
+            Response resp = socketClient.sendRequest(new Request("RESET_PASSWORD", reqData));
+            if ("SUCCESS".equals(resp.getStatus())) {
+                showAlert("Thành công", "Đổi mật khẩu cho tài khoản '" + selectedUser.getUsername() + "' thành công!");
+                txtUserPassword.clear();
+            } else {
+                showAlert("Lỗi", resp.getMessage());
+            }
+        } catch (IOException e) {
+            showAlert("Lỗi kết nối", e.getMessage());
+        }
+    }
+
+    @FXML
+    public void handleDeleteUser() {
+        if (selectedUser == null) {
+            showAlert("Thông báo", "Vui lòng chọn tài khoản nhân viên cần xóa trong bảng!");
+            return;
+        }
+        if (selectedUser.getUserId() == 1) {
+            showAlert("Cảnh báo", "Không thể xóa tài khoản Quản trị viên gốc (admin)!");
+            return;
+        }
+
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Xác nhận xóa tài khoản");
+        confirm.setHeaderText("Xóa tài khoản nhân viên: " + selectedUser.getUsername() + " (" + selectedUser.getFullName() + ")?");
+        confirm.setContentText("Hành động này không thể hoàn tác!");
+
+        Optional<ButtonType> result = confirm.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            try {
+                Response resp = socketClient.sendRequest(new Request("DELETE_USER", selectedUser.getUserId()));
+                if ("SUCCESS".equals(resp.getStatus())) {
+                    showAlert("Thành công", "Đã xóa tài khoản thành công!");
+                    clearUserForm();
+                    loadUsersData();
+                } else {
+                    showAlert("Lỗi", resp.getMessage());
+                }
+            } catch (IOException e) {
+                showAlert("Lỗi kết nối", e.getMessage());
+            }
+        }
     }
 
     @FXML
