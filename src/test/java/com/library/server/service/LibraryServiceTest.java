@@ -205,5 +205,53 @@ public class LibraryServiceTest {
         Map<?, ?> topMap = (Map<?, ?>) topBooks;
         assertFalse(topMap.isEmpty(), "Top borrowed books should not be empty");
     }
+
+    @Test
+    @DisplayName("Test Export Books CSV")
+    public void testExportBooksCsv() {
+        Request req = new Request("EXPORT_BOOKS_CSV", null);
+        Response res = service.handleRequest(req);
+        assertEquals("SUCCESS", res.getStatus());
+        assertTrue(res.getData() instanceof Map);
+
+        Map<?, ?> map = (Map<?, ?>) res.getData();
+        assertNotNull(map.get("fileName"));
+        String csv = (String) map.get("csvData");
+        assertNotNull(csv);
+        assertTrue(csv.startsWith("\uFEFF"), "CSV must include UTF-8 BOM");
+        assertTrue(csv.contains("Mã sách,Tên sách,Tác giả"));
+    }
+
+    @Test
+    @DisplayName("Test Export Borrowings CSV")
+    public void testExportBorrowingsCsv() {
+        Request req = new Request("EXPORT_BORROWINGS_CSV", null);
+        Response res = service.handleRequest(req);
+        assertEquals("SUCCESS", res.getStatus());
+        assertTrue(res.getData() instanceof Map);
+
+        Map<?, ?> map = (Map<?, ?>) res.getData();
+        assertNotNull(map.get("fileName"));
+        String csv = (String) map.get("csvData");
+        assertNotNull(csv);
+        assertTrue(csv.startsWith("\uFEFF"), "CSV must include UTF-8 BOM");
+        assertTrue(csv.contains("Mã phiếu,Mã độc giả,Tên độc giả"));
+    }
+
+    @Test
+    @DisplayName("Test Export Fines CSV")
+    public void testExportFinesCsv() {
+        Request req = new Request("EXPORT_FINES_CSV", null);
+        Response res = service.handleRequest(req);
+        assertEquals("SUCCESS", res.getStatus());
+        assertTrue(res.getData() instanceof Map);
+
+        Map<?, ?> map = (Map<?, ?>) res.getData();
+        assertNotNull(map.get("fileName"));
+        String csv = (String) map.get("csvData");
+        assertNotNull(csv);
+        assertTrue(csv.startsWith("\uFEFF"), "CSV must include UTF-8 BOM");
+        assertTrue(csv.contains("Mã phiếu phạt,Mã phiếu mượn"));
+    }
 }
 

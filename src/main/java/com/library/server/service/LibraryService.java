@@ -63,6 +63,12 @@ public class LibraryService {
                     return handlePayFine(data);
                 case "GET_STATS":
                     return handleGetStats();
+                case "EXPORT_BOOKS_CSV":
+                    return handleExportBooksCsv();
+                case "EXPORT_BORROWINGS_CSV":
+                    return handleExportBorrowingsCsv();
+                case "EXPORT_FINES_CSV":
+                    return handleExportFinesCsv();
                 default:
                     return Response.error("Hành động không được hỗ trợ: " + action);
             }
@@ -401,5 +407,82 @@ public class LibraryService {
         stats.put("topBorrowedBooks", InMemoryStore.getTopBorrowedBooks());
 
         return Response.success("Lấy thống kê thành công", stats);
+    }
+
+    private String escapeCsv(Object val) {
+        if (val == null) return "";
+        String str = String.valueOf(val);
+        if (str.contains(",") || str.contains("\"") || str.contains("\n") || str.contains("\r")) {
+            str = "\"" + str.replace("\"", "\"\"") + "\"";
+        }
+        return str;
+    }
+
+    private Response handleExportBooksCsv() {
+        List<Book> list = InMemoryStore.getAllBooks();
+        StringBuilder sb = new StringBuilder();
+        sb.append('\uFEFF'); // UTF-8 BOM for MS Excel compatibility
+        sb.append("Mã sách,Tên sách,Tác giả,Thể loại,Nhà xuất bản,Năm xuất bản,Tổng số,Khả dụng,ISBN\n");
+        for (Book b : list) {
+            sb.append(escapeCsv(b.getBookId())).append(",")
+              .append(escapeCsv(b.getTitle())).append(",")
+              .append(escapeCsv(b.getAuthor())).append(",")
+              .append(escapeCsv(b.getCategoryName())).append(",")
+              .append(escapeCsv(b.getPublisher())).append(",")
+              .append(escapeCsv(b.getPublishYear())).append(",")
+              .append(escapeCsv(b.getQuantity())).append(",")
+              .append(escapeCsv(b.getAvailableQuantity())).append(",")
+              .append(escapeCsv(b.getIsbn())).append("\n");
+        }
+
+        Map<String, String> res = new HashMap<>();
+        res.put("fileName", "danh_sach_sach_" + LocalDate.now() + ".csv");
+        res.put("csvData", sb.toString());
+        return Response.success("Xuất danh sách sách CSV thành công", res);
+    }
+
+    private Response handleExportBorrowingsCsv() {
+        List<Borrowing> list = InMemoryStore.getAllBorrowings();
+        StringBuilder sb = new StringBuilder();
+        sb.append('\uFEFF');
+        sb.append("Mã phiếu,Mã độc giả,Tên độc giả,Thủ thư,Ngày mượn,Hạn trả,Ngày trả,Trạng thái,Tiền phạt\n");
+        for (Borrowing b : list) {
+            sb.append(escapeCsv(b.getBorrowingId())).append(",")
+              .append(escapeCsv(b.getReaderId())).append(",")
+              .append(escapeCsv(b.getReaderName())).append(",")
+              .append(escapeCsv(b.getUserName())).append(",")
+              .append(escapeCsv(b.getBorrowDate())).append(",")
+              .append(escapeCsv(b.getDueDate())).append(",")
+              .append(escapeCsv(b.getReturnDate())).append(",")
+              .append(escapeCsv(b.getStatus())).append(",")
+              .append(escapeCsv(b.getFineAmount())).append("\n");
+        }
+
+        Map<String, String> res = new HashMap<>();
+        res.put("fileName", "lich_su_muon_tra_" + LocalDate.now() + ".csv");
+        res.put("csvData", sb.toString());
+        return Response.success("Xuất lịch sử mượn trả CSV thành công", res);
+    }
+
+    private Response handleExportFinesCsv() {
+        List<Fine> list = InMemoryStore.getAllFines();
+        StringBuilder sb = new StringBuilder();
+        sb.append('\uFEFF');
+        sb.append("Mã phiếu phạt,Mã phiếu mượn,Mã độc giả,Tên độc giả,Số tiền (VNĐ),Trạng thái,Lý do vi phạm,Ngày tạo\n");
+        for (Fine f : list) {
+            sb.append(escapeCsv(f.getFineId())).append(",")
+              .append(escapeCsv(f.getBorrowingId())).append(",")
+              .append(escapeCsv(f.getReaderId())).append(",")
+              .append(escapeCsv(f.getReaderName())).append(",")
+              .append(escapeCsv(f.getAmount())).append(",")
+              .append(escapeCsv(f.getStatus())).append(",")
+              .append(escapeCsv(f.getReason())).append(",")
+              .append(escapeCsv(f.getCreatedAt())).append("\n");
+        }
+
+        Map<String, String> res = new HashMap<>();
+        res.put("fileName", "danh_sach_tien_phat_" + LocalDate.now() + ".csv");
+        res.put("csvData", sb.toString());
+        return Response.success("Xuất danh sách tiền phạt CSV thành công", res);
     }
 }

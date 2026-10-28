@@ -22,10 +22,16 @@ import javafx.scene.chart.PieChart;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public class MainController {
@@ -42,7 +48,8 @@ public class MainController {
     @FXML private Button btnNavBorrow;
     @FXML private Button btnNavFines;
 
-    // Views
+    // Main Content Area & Views
+    @FXML private StackPane contentArea;
     @FXML private VBox viewDashboard;
     @FXML private VBox viewBooks;
     @FXML private VBox viewReaders;
@@ -705,6 +712,69 @@ public class MainController {
             stage.centerOnScreen();
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    @FXML
+    public void handleExportBooksCsv() {
+        exportCsv("EXPORT_BOOKS_CSV", "danh_sach_sach.csv");
+    }
+
+    @FXML
+    public void handleExportBorrowingsCsv() {
+        exportCsv("EXPORT_BORROWINGS_CSV", "lich_su_muon_tra.csv");
+    }
+
+    @FXML
+    public void handleExportFinesCsv() {
+        exportCsv("EXPORT_FINES_CSV", "danh_sach_tien_phat.csv");
+    }
+
+    private void exportCsv(String action, String fallbackFileName) {
+        try {
+            Response resp = socketClient.sendRequest(new Request(action, null));
+            if ("SUCCESS".equals(resp.getStatus()) && resp.getData() instanceof Map) {
+                Map<?, ?> map = (Map<?, ?>) resp.getData();
+                Object fnObj = map.get("fileName");
+                String fileName = fnObj != null ? fnObj.toString() : fallbackFileName;
+                Object dataObj = map.get("csvData");
+                String csvData = dataObj != null ? dataObj.toString() : null;
+                if (csvData != null) {
+                    saveCsvWithFileChooser(fileName, csvData);
+                } else {
+                    showAlert("Lỗi xuất file", "Dữ liệu trả về từ Server bị rỗng.");
+                }
+            } else {
+                showAlert("Lỗi", resp.getMessage());
+            }
+        } catch (IOException e) {
+            showAlert("Lỗi kết nối", e.getMessage());
+        }
+    }
+
+    private void saveCsvWithFileChooser(String defaultFileName, String csvContent) {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Lưu báo cáo CSV / Excel");
+        fileChooser.setInitialFileName(defaultFileName);
+        fileChooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("CSV Files (*.csv)", "*.csv"),
+                new FileChooser.ExtensionFilter("All Files (*.*)", "*.*")
+        );
+
+        Stage stage = null;
+        if (contentArea != null && contentArea.getScene() != null) {
+            stage = (Stage) contentArea.getScene().getWindow();
+        } else if (btnNavDashboard != null && btnNavDashboard.getScene() != null) {
+            stage = (Stage) btnNavDashboard.getScene().getWindow();
+        }
+        File targetFile = fileChooser.showSaveDialog(stage);
+        if (targetFile != null) {
+            try (OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(targetFile), StandardCharsets.UTF_8)) {
+                writer.write(csvContent);
+                showAlert("Xuất Báo cáo thành công", "File đã được lưu tại:\n" + targetFile.getAbsolutePath());
+            } catch (IOException ex) {
+                showAlert("Lỗi lưu file", "Không thể ghi file: " + ex.getMessage());
+            }
         }
     }
 
