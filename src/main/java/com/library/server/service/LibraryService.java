@@ -7,6 +7,7 @@ import com.library.common.protocol.NetworkUtils;
 import com.library.common.protocol.Request;
 import com.library.common.protocol.Response;
 import com.library.server.dao.InMemoryStore;
+import com.library.server.net.ClientSessionManager;
 
 import java.time.LocalDate;
 import java.util.*;
@@ -69,6 +70,10 @@ public class LibraryService {
                     return handleExportBorrowingsCsv();
                 case "EXPORT_FINES_CSV":
                     return handleExportFinesCsv();
+                case "GET_ACTIVE_SESSIONS":
+                    return handleGetActiveSessions();
+                case "KICK_SESSION":
+                    return handleKickSession(data);
                 default:
                     return Response.error("Hành động không được hỗ trợ: " + action);
             }
@@ -484,5 +489,36 @@ public class LibraryService {
         res.put("fileName", "danh_sach_tien_phat_" + LocalDate.now() + ".csv");
         res.put("csvData", sb.toString());
         return Response.success("Xuất danh sách tiền phạt CSV thành công", res);
+    }
+
+    private Response handleGetActiveSessions() {
+        Map<String, Object> map = new HashMap<>();
+        map.put("sessions", ClientSessionManager.getAllSessions());
+        map.put("activeCount", ClientSessionManager.getActiveSessionCount());
+        map.put("totalRequests", ClientSessionManager.getTotalRequests());
+        map.put("serverPort", 8888);
+        return Response.success("Lấy danh sách phiên kết nối thành công", map);
+    }
+
+    private Response handleKickSession(Object data) {
+        String sessionId = null;
+        if (data instanceof String) {
+            sessionId = (String) data;
+        } else if (data instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) data;
+            Object sid = map.get("sessionId");
+            if (sid != null) sessionId = sid.toString();
+        }
+
+        if (sessionId == null || sessionId.trim().isEmpty()) {
+            return Response.error("Mã phiên kết nối không hợp lệ.");
+        }
+
+        boolean ok = ClientSessionManager.kickSession(sessionId.trim());
+        if (ok) {
+            return Response.success("Đã ngắt kết nối thành công phiên: " + sessionId, sessionId);
+        } else {
+            return Response.error("Không tìm thấy phiên kết nối đang mở với mã: " + sessionId);
+        }
     }
 }

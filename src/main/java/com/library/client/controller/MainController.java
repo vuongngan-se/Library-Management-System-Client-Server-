@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.library.client.net.SocketClient;
 import com.library.common.model.Book;
 import com.library.common.model.Borrowing;
+import com.library.common.model.ClientSession;
 import com.library.common.model.Fine;
 import com.library.common.model.Reader;
 import com.library.common.model.User;
@@ -47,6 +48,7 @@ public class MainController {
     @FXML private Button btnNavReaders;
     @FXML private Button btnNavBorrow;
     @FXML private Button btnNavFines;
+    @FXML private Button btnNavNetwork;
 
     // Main Content Area & Views
     @FXML private StackPane contentArea;
@@ -55,6 +57,7 @@ public class MainController {
     @FXML private VBox viewReaders;
     @FXML private VBox viewBorrow;
     @FXML private VBox viewFines;
+    @FXML private VBox viewNetwork;
 
     // Dashboard Metrics & Charts
     @FXML private Label lblStatTotalBooks;
@@ -124,6 +127,21 @@ public class MainController {
     @FXML private TableColumn<Fine, String> colFineReason;
     @FXML private TableColumn<Fine, String> colFineDate;
 
+    // Network Monitor Module
+    @FXML private Label lblStatActiveClients;
+    @FXML private Label lblStatTotalRequests;
+    @FXML private Label lblStatServerPort;
+    @FXML private TableView<ClientSession> tblClientSessions;
+    @FXML private TableColumn<ClientSession, String> colSessionId;
+    @FXML private TableColumn<ClientSession, String> colSessionIp;
+    @FXML private TableColumn<ClientSession, Integer> colSessionPort;
+    @FXML private TableColumn<ClientSession, String> colSessionUser;
+    @FXML private TableColumn<ClientSession, String> colSessionFullName;
+    @FXML private TableColumn<ClientSession, String> colSessionRole;
+    @FXML private TableColumn<ClientSession, String> colSessionConnectedAt;
+    @FXML private TableColumn<ClientSession, Integer> colSessionRequests;
+    @FXML private TableColumn<ClientSession, String> colSessionLastAction;
+
     private Book selectedBook;
     private Reader selectedReader;
 
@@ -140,6 +158,10 @@ public class MainController {
     public void initUser(User user) {
         this.currentUser = user;
         lblUserInfo.setText("Xin chào, " + user.getFullName() + " (" + user.getRole() + ")");
+        if (!"ADMIN".equalsIgnoreCase(user.getRole())) {
+            btnNavNetwork.setVisible(false);
+            btnNavNetwork.setManaged(false);
+        }
         setupTableColumns();
         showDashboard();
     }
@@ -205,6 +227,17 @@ public class MainController {
         colFineStatus.setCellValueFactory(new PropertyValueFactory<>("status"));
         colFineReason.setCellValueFactory(new PropertyValueFactory<>("reason"));
         colFineDate.setCellValueFactory(new PropertyValueFactory<>("createdAt"));
+
+        // Network Sessions
+        colSessionId.setCellValueFactory(new PropertyValueFactory<>("sessionId"));
+        colSessionIp.setCellValueFactory(new PropertyValueFactory<>("ipAddress"));
+        colSessionPort.setCellValueFactory(new PropertyValueFactory<>("port"));
+        colSessionUser.setCellValueFactory(new PropertyValueFactory<>("username"));
+        colSessionFullName.setCellValueFactory(new PropertyValueFactory<>("fullName"));
+        colSessionRole.setCellValueFactory(new PropertyValueFactory<>("role"));
+        colSessionConnectedAt.setCellValueFactory(new PropertyValueFactory<>("connectedAt"));
+        colSessionRequests.setCellValueFactory(new PropertyValueFactory<>("requestCount"));
+        colSessionLastAction.setCellValueFactory(new PropertyValueFactory<>("lastAction"));
     }
 
     private void setActiveNav(Button activeButton, VBox activeView) {
@@ -213,6 +246,7 @@ public class MainController {
         btnNavReaders.getStyleClass().remove("sidebar-btn-active");
         btnNavBorrow.getStyleClass().remove("sidebar-btn-active");
         btnNavFines.getStyleClass().remove("sidebar-btn-active");
+        btnNavNetwork.getStyleClass().remove("sidebar-btn-active");
 
         activeButton.getStyleClass().add("sidebar-btn-active");
 
@@ -221,6 +255,7 @@ public class MainController {
         viewReaders.setVisible(false);
         viewBorrow.setVisible(false);
         viewFines.setVisible(false);
+        viewNetwork.setVisible(false);
 
         activeView.setVisible(true);
     }
@@ -253,6 +288,68 @@ public class MainController {
     public void showFines() {
         setActiveNav(btnNavFines, viewFines);
         loadFinesData();
+    }
+
+    @FXML
+    public void showNetwork() {
+        setActiveNav(btnNavNetwork, viewNetwork);
+        loadNetworkSessions();
+    }
+
+    @FXML
+    public void handleRefreshSessions() {
+        loadNetworkSessions();
+    }
+
+    private void loadNetworkSessions() {
+        try {
+            Response resp = socketClient.sendRequest(new Request("GET_ACTIVE_SESSIONS", null));
+            if ("SUCCESS".equals(resp.getStatus()) && resp.getData() instanceof Map) {
+                Map<?, ?> data = (Map<?, ?>) resp.getData();
+                lblStatActiveClients.setText(String.valueOf(data.get("activeCount")));
+                lblStatTotalRequests.setText(String.valueOf(data.get("totalRequests")));
+                lblStatServerPort.setText("TCP: " + data.get("serverPort"));
+
+                Object sessionsObj = data.get("sessions");
+                if (sessionsObj != null) {
+                    List<ClientSession> sessions = socketClient.convertData(sessionsObj, new TypeReference<List<ClientSession>>() {});
+                    tblClientSessions.setItems(FXCollections.observableArrayList(sessions));
+                }
+            } else {
+                showAlert("Lỗi", resp.getMessage());
+            }
+        } catch (IOException e) {
+            showAlert("Lỗi truyền tin Socket", e.getMessage());
+        }
+    }
+
+    @FXML
+    public void handleKickSelectedSession() {
+        ClientSession selected = tblClientSessions.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            showAlert("Thông báo", "Vui lòng chọn một phiên kết nối Client cần ngắt trong bảng!");
+            return;
+        }
+
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Xác nhận ngắt kết nối");
+        confirm.setHeaderText("Cưỡng bức ngắt kết nối Socket của Client?");
+        confirm.setContentText("Mã phiên: " + selected.getSessionId() + "\nIP/Port: " + selected.getIpAddress() + ":" + selected.getPort() + "\nTài khoản: " + selected.getUsername());
+
+        Optional<ButtonType> result = confirm.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            try {
+                Response resp = socketClient.sendRequest(new Request("KICK_SESSION", selected.getSessionId()));
+                if ("SUCCESS".equals(resp.getStatus())) {
+                    showAlert("Thành công", "Đã ngắt kết nối phiên " + selected.getSessionId());
+                    loadNetworkSessions();
+                } else {
+                    showAlert("Lỗi", resp.getMessage());
+                }
+            } catch (IOException e) {
+                showAlert("Lỗi truyền tin Socket", e.getMessage());
+            }
+        }
     }
 
     private void loadDashboardData() {

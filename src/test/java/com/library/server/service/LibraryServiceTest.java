@@ -3,6 +3,7 @@ package com.library.server.service;
 import com.library.common.model.Book;
 import com.library.common.protocol.Request;
 import com.library.common.protocol.Response;
+import com.library.server.net.ClientSessionManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -252,6 +253,33 @@ public class LibraryServiceTest {
         assertNotNull(csv);
         assertTrue(csv.startsWith("\uFEFF"), "CSV must include UTF-8 BOM");
         assertTrue(csv.contains("Mã phiếu phạt,Mã phiếu mượn"));
+    }
+
+    @Test
+    @DisplayName("Test Active Sessions and Kick Session")
+    public void testActiveSessionsAndKickSession() {
+        ClientSessionManager.register("TEST-SES-001", "192.168.1.50", 61234, null);
+        ClientSessionManager.updateUser("TEST-SES-001", "staff_test", "Staff Tester", "STAFF");
+        ClientSessionManager.recordRequest("TEST-SES-001", "GET_BOOKS");
+
+        Request req = new Request("GET_ACTIVE_SESSIONS", null);
+        Response res = service.handleRequest(req);
+        assertEquals("SUCCESS", res.getStatus());
+        assertTrue(res.getData() instanceof Map);
+
+        Map<?, ?> data = (Map<?, ?>) res.getData();
+        assertTrue(((Number) data.get("activeCount")).intValue() >= 1);
+        assertTrue(((Number) data.get("totalRequests")).intValue() >= 1);
+
+        // Test Kick session
+        Request kickReq = new Request("KICK_SESSION", "TEST-SES-001");
+        Response kickRes = service.handleRequest(kickReq);
+        assertEquals("SUCCESS", kickRes.getStatus());
+
+        // Kick non-existent session
+        Request kickInvalid = new Request("KICK_SESSION", "NON-EXISTENT");
+        Response invalidRes = service.handleRequest(kickInvalid);
+        assertEquals("ERROR", invalidRes.getStatus());
     }
 }
 
