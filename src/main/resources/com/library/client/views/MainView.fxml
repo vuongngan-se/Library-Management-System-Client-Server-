@@ -21,6 +21,11 @@
                         <Insets right="15.0" />
                     </HBox.margin>
                 </Label>
+                <Button fx:id="btnThemeToggle" onAction="#handleToggleTheme" style="-fx-background-color: rgba(255,255,255,0.15); -fx-text-fill: white; -fx-font-size: 13px; -fx-font-weight: bold; -fx-padding: 8 14; -fx-background-radius: 6; -fx-cursor: hand;" text="🌙 Giao diện Tối">
+                    <HBox.margin>
+                        <Insets right="10.0" />
+                    </HBox.margin>
+                </Button>
                 <Button onAction="#handleLogout" styleClass="btn-danger" text="Đăng xuất" />
             </children>
         </HBox>

@@ -44,6 +44,8 @@ public class MainController {
     private final SocketClient socketClient = SocketClient.getInstance();
 
     @FXML private Label lblUserInfo;
+    @FXML private Button btnThemeToggle;
+    private boolean isDarkMode = false;
 
     // Sidebar buttons
     @FXML private Button btnNavDashboard;
@@ -1150,6 +1152,26 @@ public class MainController {
             } catch (IOException e) {
                 showAlert("Lỗi mạng", e.getMessage());
             }
+        }
+    }
+
+    @FXML
+    public void handleToggleTheme() {
+        if (btnThemeToggle == null || btnThemeToggle.getScene() == null) return;
+        Scene scene = btnThemeToggle.getScene();
+        String darkCss = getClass().getResource("/css/style-dark.css").toExternalForm();
+
+        isDarkMode = !isDarkMode;
+        if (isDarkMode) {
+            if (!scene.getStylesheets().contains(darkCss)) {
+                scene.getStylesheets().add(darkCss);
+            }
+            btnThemeToggle.setText("☀️ Giao diện Sáng");
+            showLiveToast("🌙 Đã chuyển sang chế độ Giao diện Tối");
+        } else {
+            scene.getStylesheets().remove(darkCss);
+            btnThemeToggle.setText("🌙 Giao diện Tối");
+            showLiveToast("☀️ Đã chuyển sang chế độ Giao diện Sáng");
         }
     }
 

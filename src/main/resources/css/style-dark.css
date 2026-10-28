@@ -1,0 +1,174 @@
+/* Sleek Dark Palette for Library Management System */
+
+.root {
+    -fx-font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
+    -fx-background-color: #0b1120;
+}
+
+/* Header & Navbar */
+.navbar {
+    -fx-background-color: linear-gradient(to right, #090d16, #1e293b);
+    -fx-border-color: #334155;
+    -fx-border-width: 0 0 1px 0;
+}
+
+.nav-title {
+    -fx-text-fill: #f8fafc;
+}
+
+/* Sidebar */
+.sidebar {
+    -fx-background-color: #070c18;
+    -fx-border-color: #1e293b;
+    -fx-border-width: 0 1px 0 0;
+}
+
+.sidebar-btn {
+    -fx-text-fill: #94a3b8;
+}
+
+.sidebar-btn:hover {
+    -fx-background-color: #1e293b;
+    -fx-text-fill: #f8fafc;
+}
+
+.sidebar-btn-active {
+    -fx-background-color: #2563eb;
+    -fx-text-fill: #ffffff;
+    -fx-effect: dropshadow(three-pass-box, rgba(37, 99, 235, 0.4), 8, 0, 0, 2);
+}
+
+/* Cards & Containers */
+.card {
+    -fx-background-color: #151f32;
+    -fx-background-radius: 10px;
+    -fx-border-color: #24324d;
+    -fx-border-radius: 10px;
+    -fx-border-width: 1px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.5), 10, 0, 0, 4);
+}
+
+/* Labels & Text */
+.label {
+    -fx-text-fill: #e2e8f0;
+}
+
+/* Form Fields */
+.text-field, .password-field {
+    -fx-background-color: #0b1120;
+    -fx-text-fill: #f8fafc;
+    -fx-border-color: #334155;
+    -fx-prompt-text-fill: #64748b;
+}
+
+.text-field:focused, .password-field:focused {
+    -fx-border-color: #3b82f6;
+}
+
+.combo-box {
+    -fx-background-color: #0b1120;
+    -fx-border-color: #334155;
+}
+
+.combo-box .cell {
+    -fx-text-fill: #f8fafc;
+}
+
+.combo-box-popup .list-view {
+    -fx-background-color: #151f32;
+    -fx-border-color: #334155;
+}
+
+.combo-box-popup .list-cell {
+    -fx-background-color: #151f32;
+    -fx-text-fill: #e2e8f0;
+}
+
+.combo-box-popup .list-cell:hover {
+    -fx-background-color: #1e293b;
+}
+
+/* TableView in Dark Mode */
+.table-view {
+    -fx-background-color: #151f32;
+    -fx-border-color: #24324d;
+}
+
+.table-view .column-header-background {
+    -fx-background-color: #0d1527;
+}
+
+.table-view .column-header {
+    -fx-background-color: transparent;
+    -fx-text-fill: #94a3b8;
+}
+
+.table-row-cell {
+    -fx-background-color: #151f32;
+    -fx-text-fill: #e2e8f0;
+    -fx-border-color: #1e293b;
+    -fx-border-width: 0 0 1px 0;
+}
+
+.table-row-cell:odd {
+    -fx-background-color: #10192a;
+}
+
+.table-row-cell:hover {
+    -fx-background-color: #1e2d47;
+}
+
+.table-row-cell:selected {
+    -fx-background-color: #1d4ed8;
+    -fx-text-fill: white;
+}
+
+.table-row-cell:selected .text {
+    -fx-fill: white;
+}
+
+/* ScrollPanes */
+.scroll-pane {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+}
+
+.scroll-pane > .viewport {
+    -fx-background-color: transparent;
+}
+
+/* Charts */
+.chart-title {
+    -fx-text-fill: #f8fafc;
+}
+
+.chart-pie-label {
+    -fx-fill: #cbd5e1;
+}
+
+.axis {
+    -fx-tick-label-fill: #94a3b8;
+}
+
+.axis-label {
+    -fx-text-fill: #94a3b8;
+}
+
+/* Chat Overrides in Dark Mode */
+.chat-bubble-other {
+    -fx-background-color: #1e293b;
+    -fx-border-color: #334155;
+}
+
+.chat-bubble-other .label {
+    -fx-text-fill: #e2e8f0;
+}
+
+.chat-bubble-system {
+    -fx-background-color: #451a03;
+    -fx-border-color: #78350f;
+}
+
+.chat-bubble-system .label {
+    -fx-text-fill: #fde68a;
+}
