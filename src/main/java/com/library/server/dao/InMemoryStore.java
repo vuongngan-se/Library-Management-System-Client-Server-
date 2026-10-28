@@ -880,4 +880,107 @@ public class InMemoryStore {
         }
         return true;
     }
+
+    public static Map<String, Integer> getCategoryDistribution() {
+        if (!DatabaseConfig.isInMemoryMode()) {
+            Map<String, Integer> dist = new LinkedHashMap<>();
+            try (Connection conn = DatabaseConfig.getConnection()) {
+                if (conn != null) {
+                    String sql = "SELECT c.category_name, COUNT(b.book_id) AS cnt " +
+                            "FROM categories c " +
+                            "JOIN books b ON c.category_id = b.category_id " +
+                            "GROUP BY c.category_id, c.category_name " +
+                            "ORDER BY cnt DESC";
+                    PreparedStatement ps = conn.prepareStatement(sql);
+                    ResultSet rs = ps.executeQuery();
+                    while (rs.next()) {
+                        dist.put(rs.getString("category_name"), rs.getInt("cnt"));
+                    }
+                    if (!dist.isEmpty()) {
+                        return dist;
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        Map<String, Integer> dist = new HashMap<>();
+        for (Book b : getAllBooks()) {
+            String cat = b.getCategoryName();
+            if (cat == null || cat.trim().isEmpty()) {
+                Category c = categories.get(b.getCategoryId());
+                cat = c != null ? c.getCategoryName() : "Khác";
+            }
+            dist.put(cat, dist.getOrDefault(cat, 0) + 1);
+        }
+        return dist.entrySet().stream()
+                .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+                .collect(java.util.stream.Collectors.toMap(
+                        Map.Entry::getKey,
+                        Map.Entry::getValue,
+                        (e1, e2) -> e1,
+                        LinkedHashMap::new
+                ));
+    }
+
+    public static Map<String, Integer> getTopBorrowedBooks() {
+        if (!DatabaseConfig.isInMemoryMode()) {
+            Map<String, Integer> top = new LinkedHashMap<>();
+            try (Connection conn = DatabaseConfig.getConnection()) {
+                if (conn != null) {
+                    String sql = "SELECT b.title, SUM(bd.quantity) AS total_borrowed " +
+                            "FROM borrowing_details bd " +
+                            "JOIN books b ON bd.book_id = b.book_id " +
+                            "GROUP BY b.book_id, b.title " +
+                            "ORDER BY total_borrowed DESC " +
+                            "LIMIT 6";
+                    PreparedStatement ps = conn.prepareStatement(sql);
+                    ResultSet rs = ps.executeQuery();
+                    while (rs.next()) {
+                        top.put(rs.getString("title"), rs.getInt("total_borrowed"));
+                    }
+                    if (!top.isEmpty()) {
+                        return top;
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        Map<String, Integer> counts = new HashMap<>();
+        for (Borrowing b : borrowings.values()) {
+            if (b.getDetails() != null) {
+                for (BorrowingDetail bd : b.getDetails()) {
+                    String title = bd.getBookTitle();
+                    if (title == null) {
+                        Book book = books.get(bd.getBookId());
+                        if (book != null) title = book.getTitle();
+                    }
+                    if (title != null) {
+                        counts.put(title, counts.getOrDefault(title, 0) + bd.getQuantity());
+                    }
+                }
+            }
+        }
+
+        if (counts.isEmpty()) {
+            for (Book book : books.values()) {
+                int borrowed = book.getQuantity() - book.getAvailableQuantity();
+                if (borrowed > 0) {
+                    counts.put(book.getTitle(), borrowed);
+                }
+            }
+        }
+
+        return counts.entrySet().stream()
+                .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+                .limit(6)
+                .collect(java.util.stream.Collectors.toMap(
+                        Map.Entry::getKey,
+                        Map.Entry::getValue,
+                        (e1, e2) -> e1,
+                        LinkedHashMap::new
+                ));
+    }
 }

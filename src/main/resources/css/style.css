@@ -236,3 +236,25 @@
     -fx-underline: true;
 }
 
+/* Dashboard Scroll & Charts */
+.content-scrollpane {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+}
+.content-scrollpane > .viewport {
+    -fx-background-color: transparent;
+}
+.chart-title {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #2c3e50;
+}
+.chart-pie-label {
+    -fx-font-size: 11px;
+    -fx-fill: #2c3e50;
+}
+.chart-legend {
+    -fx-background-color: transparent;
+    -fx-padding: 5px;
+}
+

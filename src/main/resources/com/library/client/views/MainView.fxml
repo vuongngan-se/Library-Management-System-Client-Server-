@@ -4,6 +4,7 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.Font?>
+<?import javafx.scene.chart.*?>
 
 <BorderPane prefHeight="720.0" prefWidth="1100.0" styleClass="root" stylesheets="@/css/style.css" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.library.client.controller.MainController">
     <!-- Top Navigation Bar -->
@@ -42,71 +43,124 @@
     <center>
         <StackPane fx:id="contentArea" style="-fx-padding: 20px;" BorderPane.alignment="CENTER">
             <!-- Dashboard View -->
-            <VBox fx:id="viewDashboard" spacing="20.0">
+            <VBox fx:id="viewDashboard" spacing="15.0">
                 <children>
                     <Label text="Bảng điều khiển &amp; Thống kê" textFill="#2c3e50">
                         <font>
                             <Font name="System Bold" size="20.0" />
                         </font>
                     </Label>
-                    <GridPane hgap="20.0" vgap="20.0">
-                        <columnConstraints>
-                            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
-                            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
-                            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
-                            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
-                        </columnConstraints>
-                        <rowConstraints>
-                            <RowConstraints minHeight="10.0" prefHeight="110.0" vgrow="SOMETIMES" />
-                        </rowConstraints>
-                        <children>
-                            <VBox styleClass="metric-card, metric-card-blue" GridPane.columnIndex="0">
+                    <ScrollPane fitToWidth="true" styleClass="content-scrollpane" VBox.vgrow="ALWAYS">
+                        <content>
+                            <VBox spacing="20.0">
                                 <children>
-                                    <Label styleClass="metric-title" text="TỔNG ĐẦU SÁCH" />
-                                    <Label fx:id="lblStatTotalBooks" styleClass="metric-value" text="0" />
+                                    <GridPane hgap="20.0" vgap="20.0">
+                                        <columnConstraints>
+                                            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                                            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                                            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                                            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                                        </columnConstraints>
+                                        <rowConstraints>
+                                            <RowConstraints minHeight="10.0" prefHeight="110.0" vgrow="SOMETIMES" />
+                                        </rowConstraints>
+                                        <children>
+                                            <VBox styleClass="metric-card, metric-card-blue" GridPane.columnIndex="0">
+                                                <children>
+                                                    <Label styleClass="metric-title" text="TỔNG ĐẦU SÁCH" />
+                                                    <Label fx:id="lblStatTotalBooks" styleClass="metric-value" text="0" />
+                                                </children>
+                                            </VBox>
+                                            <VBox styleClass="metric-card, metric-card-green" GridPane.columnIndex="1">
+                                                <children>
+                                                    <Label styleClass="metric-title" text="SÁCH KHẢ DỤNG" />
+                                                    <Label fx:id="lblStatAvailableBooks" styleClass="metric-value" text="0" />
+                                                </children>
+                                            </VBox>
+                                            <VBox styleClass="metric-card, metric-card-purple" GridPane.columnIndex="2">
+                                                <children>
+                                                    <Label styleClass="metric-title" text="ĐỘC GIẢ ĐĂNG KÝ" />
+                                                    <Label fx:id="lblStatTotalReaders" styleClass="metric-value" text="0" />
+                                                </children>
+                                            </VBox>
+                                            <VBox styleClass="metric-card, metric-card-orange" GridPane.columnIndex="3">
+                                                <children>
+                                                    <Label styleClass="metric-title" text="PHIẾU ĐANG MƯỢN" />
+                                                    <Label fx:id="lblStatActiveBorrowings" styleClass="metric-value" text="0" />
+                                                </children>
+                                            </VBox>
+                                        </children>
+                                    </GridPane>
+
+                                    <!-- Charts Section -->
+                                    <GridPane hgap="20.0" vgap="20.0">
+                                        <columnConstraints>
+                                            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" percentWidth="45.0" />
+                                            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" percentWidth="55.0" />
+                                        </columnConstraints>
+                                        <children>
+                                            <VBox prefHeight="330.0" styleClass="card" GridPane.columnIndex="0">
+                                                <children>
+                                                    <Label text="📊 Cơ cấu Sách theo Thể loại" textFill="#2c3e50">
+                                                        <font>
+                                                            <Font name="System Bold" size="14.0" />
+                                                        </font>
+                                                        <VBox.margin>
+                                                            <Insets bottom="10.0" />
+                                                        </VBox.margin>
+                                                    </Label>
+                                                    <PieChart fx:id="chartCategory" animated="false" legendSide="BOTTOM" VBox.vgrow="ALWAYS" />
+                                                </children>
+                                            </VBox>
+                                            <VBox prefHeight="330.0" styleClass="card" GridPane.columnIndex="1">
+                                                <children>
+                                                    <Label text="📈 Top Sách được Mượn Nhiều Nhất" textFill="#2c3e50">
+                                                        <font>
+                                                            <Font name="System Bold" size="14.0" />
+                                                        </font>
+                                                        <VBox.margin>
+                                                            <Insets bottom="10.0" />
+                                                        </VBox.margin>
+                                                    </Label>
+                                                    <BarChart fx:id="chartTopBooks" animated="false" legendVisible="false" VBox.vgrow="ALWAYS">
+                                                        <xAxis>
+                                                            <CategoryAxis fx:id="axisBookTitle" label="Tên sách" side="BOTTOM" />
+                                                        </xAxis>
+                                                        <yAxis>
+                                                            <NumberAxis fx:id="axisBorrowCount" label="Số lượt mượn" side="LEFT" />
+                                                        </yAxis>
+                                                    </BarChart>
+                                                </children>
+                                            </VBox>
+                                        </children>
+                                    </GridPane>
+
+                                    <!-- Recent Activities Table -->
+                                    <VBox prefHeight="260.0" styleClass="card">
+                                        <children>
+                                            <Label text="Hoạt động gần đây trong hệ thống" textFill="#2c3e50">
+                                                <font>
+                                                    <Font name="System Bold" size="15.0" />
+                                                </font>
+                                                <VBox.margin>
+                                                    <Insets bottom="10.0" />
+                                                </VBox.margin>
+                                            </Label>
+                                            <TableView fx:id="tblDashboardBorrowings" prefHeight="200.0" VBox.vgrow="ALWAYS">
+                                                <columns>
+                                                    <TableColumn fx:id="colDashId" prefWidth="70.0" text="Mã phiếu" />
+                                                    <TableColumn fx:id="colDashReader" prefWidth="150.0" text="Mã độc giả" />
+                                                    <TableColumn fx:id="colDashBorrowDate" prefWidth="120.0" text="Ngày mượn" />
+                                                    <TableColumn fx:id="colDashDueDate" prefWidth="120.0" text="Hạn trả" />
+                                                    <TableColumn fx:id="colDashStatus" prefWidth="120.0" text="Trạng thái" />
+                                                </columns>
+                                            </TableView>
+                                        </children>
+                                    </VBox>
                                 </children>
                             </VBox>
-                            <VBox styleClass="metric-card, metric-card-green" GridPane.columnIndex="1">
-                                <children>
-                                    <Label styleClass="metric-title" text="SÁCH KHẢ DỤNG" />
-                                    <Label fx:id="lblStatAvailableBooks" styleClass="metric-value" text="0" />
-                                </children>
-                            </VBox>
-                            <VBox styleClass="metric-card, metric-card-purple" GridPane.columnIndex="2">
-                                <children>
-                                    <Label styleClass="metric-title" text="ĐỘC GIẢ ĐĂNG KÝ" />
-                                    <Label fx:id="lblStatTotalReaders" styleClass="metric-value" text="0" />
-                                </children>
-                            </VBox>
-                            <VBox styleClass="metric-card, metric-card-orange" GridPane.columnIndex="3">
-                                <children>
-                                    <Label styleClass="metric-title" text="PHIẾU ĐANG MƯỢN" />
-                                    <Label fx:id="lblStatActiveBorrowings" styleClass="metric-value" text="0" />
-                                </children>
-                            </VBox>
-                        </children>
-                    </GridPane>
-                    <VBox styleClass="card" VBox.vgrow="ALWAYS">
-                        <children>
-                            <Label text="Hoạt động gần đây trong hệ thống" textFill="#2c3e50">
-                                <font>
-                                    <Font name="System Bold" size="15.0" />
-                                </font>
-                                <VBox.margin>
-                                    <Insets bottom="10.0" />
-                                </VBox.margin>
-                            </Label>
-                            <TableView fx:id="tblDashboardBorrowings" VBox.vgrow="ALWAYS">
-                                <columns>
-                                    <TableColumn fx:id="colDashId" prefWidth="70.0" text="Mã phiếu" />
-                                    <TableColumn fx:id="colDashReader" prefWidth="150.0" text="Mã độc giả" />
-                                    <TableColumn fx:id="colDashBorrowDate" prefWidth="120.0" text="Ngày mượn" />
-                                    <TableColumn fx:id="colDashDueDate" prefWidth="120.0" text="Hạn trả" />
-                                    <TableColumn fx:id="colDashStatus" prefWidth="120.0" text="Trạng thái" />
-                                </columns>
-                            </TableView>
-                        </children>
-                    </VBox>
+                        </content>
+                    </ScrollPane>
                 </children>
             </VBox>
 

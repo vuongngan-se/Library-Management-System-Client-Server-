@@ -178,5 +178,32 @@ public class LibraryServiceTest {
         Response renewRes = service.handleRequest(renewReq);
         assertEquals("SUCCESS", renewRes.getStatus());
     }
+
+    @Test
+    @DisplayName("Test Dashboard Stats with Category Distribution and Top Borrowed Books")
+    public void testDashboardStatsAndCharts() {
+        Request req = new Request("GET_STATS", null);
+        Response res = service.handleRequest(req);
+        assertEquals("SUCCESS", res.getStatus());
+        assertTrue(res.getData() instanceof Map);
+
+        Map<?, ?> stats = (Map<?, ?>) res.getData();
+        assertNotNull(stats.get("totalBooks"));
+        assertNotNull(stats.get("availableBooks"));
+        assertNotNull(stats.get("totalReaders"));
+        assertNotNull(stats.get("activeBorrowings"));
+
+        Object catDist = stats.get("categoryDistribution");
+        assertNotNull(catDist);
+        assertTrue(catDist instanceof Map);
+        Map<?, ?> catMap = (Map<?, ?>) catDist;
+        assertFalse(catMap.isEmpty(), "Category distribution should not be empty");
+
+        Object topBooks = stats.get("topBorrowedBooks");
+        assertNotNull(topBooks);
+        assertTrue(topBooks instanceof Map);
+        Map<?, ?> topMap = (Map<?, ?>) topBooks;
+        assertFalse(topMap.isEmpty(), "Top borrowed books should not be empty");
+    }
 }
 

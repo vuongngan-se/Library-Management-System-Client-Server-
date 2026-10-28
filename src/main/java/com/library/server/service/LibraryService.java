@@ -397,6 +397,8 @@ public class LibraryService {
         stats.put("totalReaders", readers.size());
         stats.put("activeBorrowings", borrowedCount);
         stats.put("overdueBorrowings", overdueCount);
+        stats.put("categoryDistribution", InMemoryStore.getCategoryDistribution());
+        stats.put("topBorrowedBooks", InMemoryStore.getTopBorrowedBooks());
 
         return Response.success("Lấy thống kê thành công", stats);
     }

@@ -10,10 +10,16 @@ import com.library.common.model.User;
 import com.library.common.protocol.Request;
 import com.library.common.protocol.Response;
 import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.chart.BarChart;
+import javafx.scene.chart.CategoryAxis;
+import javafx.scene.chart.NumberAxis;
+import javafx.scene.chart.PieChart;
+import javafx.scene.chart.XYChart;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.VBox;
@@ -43,11 +49,15 @@ public class MainController {
     @FXML private VBox viewBorrow;
     @FXML private VBox viewFines;
 
-    // Dashboard Metrics
+    // Dashboard Metrics & Charts
     @FXML private Label lblStatTotalBooks;
     @FXML private Label lblStatAvailableBooks;
     @FXML private Label lblStatTotalReaders;
     @FXML private Label lblStatActiveBorrowings;
+    @FXML private PieChart chartCategory;
+    @FXML private BarChart<String, Number> chartTopBooks;
+    @FXML private CategoryAxis axisBookTitle;
+    @FXML private NumberAxis axisBorrowCount;
     @FXML private TableView<Borrowing> tblDashboardBorrowings;
     @FXML private TableColumn<Borrowing, Integer> colDashId;
     @FXML private TableColumn<Borrowing, Integer> colDashReader;
@@ -109,6 +119,16 @@ public class MainController {
 
     private Book selectedBook;
     private Reader selectedReader;
+
+    @FXML
+    public void initialize() {
+        if (chartCategory != null) {
+            chartCategory.setAnimated(false);
+        }
+        if (chartTopBooks != null) {
+            chartTopBooks.setAnimated(false);
+        }
+    }
 
     public void initUser(User user) {
         this.currentUser = user;
@@ -237,6 +257,45 @@ public class MainController {
                 lblStatAvailableBooks.setText(String.valueOf(stats.get("availableBooks")));
                 lblStatTotalReaders.setText(String.valueOf(stats.get("totalReaders")));
                 lblStatActiveBorrowings.setText(String.valueOf(stats.get("activeBorrowings")));
+
+                // Load Category Distribution PieChart
+                Object catDistObj = stats.get("categoryDistribution");
+                if (catDistObj instanceof Map && chartCategory != null) {
+                    Map<?, ?> catDist = (Map<?, ?>) catDistObj;
+                    ObservableList<PieChart.Data> pieData = FXCollections.observableArrayList();
+                    int count = 0;
+                    int otherCount = 0;
+                    for (Map.Entry<?, ?> entry : catDist.entrySet()) {
+                        String name = String.valueOf(entry.getKey());
+                        int val = ((Number) entry.getValue()).intValue();
+                        if (count < 5) {
+                            pieData.add(new PieChart.Data(name + " (" + val + ")", val));
+                        } else {
+                            otherCount += val;
+                        }
+                        count++;
+                    }
+                    if (otherCount > 0) {
+                        pieData.add(new PieChart.Data("Khác (" + otherCount + ")", otherCount));
+                    }
+                    chartCategory.setData(pieData);
+                }
+
+                // Load Top Borrowed Books BarChart
+                Object topBooksObj = stats.get("topBorrowedBooks");
+                if (topBooksObj instanceof Map && chartTopBooks != null) {
+                    Map<?, ?> topBooks = (Map<?, ?>) topBooksObj;
+                    chartTopBooks.getData().clear();
+                    XYChart.Series<String, Number> series = new XYChart.Series<>();
+                    series.setName("Lượt mượn");
+                    for (Map.Entry<?, ?> entry : topBooks.entrySet()) {
+                        String title = String.valueOf(entry.getKey());
+                        String shortTitle = title.length() > 16 ? title.substring(0, 14) + "..." : title;
+                        int val = ((Number) entry.getValue()).intValue();
+                        series.getData().add(new XYChart.Data<>(shortTitle, val));
+                    }
+                    chartTopBooks.getData().add(series);
+                }
             }
 
             Response respBorrowings = socketClient.sendRequest(new Request("GET_BORROWINGS", null));
