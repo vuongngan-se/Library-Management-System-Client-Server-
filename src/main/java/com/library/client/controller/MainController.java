@@ -6,14 +6,18 @@ import com.library.client.net.SocketClient;
 import com.library.common.model.*;
 import com.library.common.protocol.Request;
 import com.library.common.protocol.Response;
+import javafx.animation.FadeTransition;
+import javafx.animation.SequentialTransition;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.util.Duration;
 import javafx.scene.chart.BarChart;
 import javafx.scene.chart.CategoryAxis;
 import javafx.scene.chart.NumberAxis;
@@ -219,12 +223,89 @@ public class MainController {
     private void onChatMessageReceived(ChatMessage msg) {
         if (msg == null) return;
         renderChatMessage(msg);
+
+        // Check if message is a reactive real-time sync event
+        if (msg.getType() != null && msg.getType().startsWith("SYNC_")) {
+            handleRealtimeSyncEvent(msg);
+            return;
+        }
+
         if (viewChat != null && !viewChat.isVisible()) {
             unreadChatCount++;
             if (btnNavChat != null) {
                 btnNavChat.setText("💬 Trò chuyện Nội bộ (" + unreadChatCount + ")");
             }
         }
+    }
+
+    private void handleRealtimeSyncEvent(ChatMessage msg) {
+        String type = msg.getType();
+        String text = msg.getMessage();
+
+        if ("SYNC_BOOKS".equals(type)) {
+            if (viewBooks != null && viewBooks.isVisible()) {
+                loadBooksData();
+            }
+            if (viewDashboard != null && viewDashboard.isVisible()) {
+                loadDashboardData();
+            }
+            if (viewBorrow != null && viewBorrow.isVisible()) {
+                loadBorrowingsData();
+            }
+            showLiveToast(text);
+        } else if ("SYNC_FINES".equals(type)) {
+            if (viewFines != null && viewFines.isVisible()) {
+                loadFinesData();
+            }
+            if (viewDashboard != null && viewDashboard.isVisible()) {
+                loadDashboardData();
+            }
+            showLiveToast(text);
+        } else if ("SYNC_READERS".equals(type)) {
+            if (viewReaders != null && viewReaders.isVisible()) {
+                loadReadersData();
+            }
+            showLiveToast(text);
+        }
+    }
+
+    private void showLiveToast(String message) {
+        if (contentArea == null) return;
+
+        Platform.runLater(() -> {
+            HBox toast = new HBox(10);
+            toast.setAlignment(Pos.CENTER_LEFT);
+            toast.setStyle("-fx-background-color: rgba(30, 41, 59, 0.95); -fx-background-radius: 8px; " +
+                    "-fx-padding: 10px 16px; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.25), 8, 0, 0, 3);");
+            toast.setMaxWidth(460);
+            toast.setMaxHeight(48);
+            StackPane.setAlignment(toast, Pos.TOP_RIGHT);
+            StackPane.setMargin(toast, new Insets(10, 15, 0, 0));
+
+            Label icon = new Label("⚡");
+            icon.setStyle("-fx-font-size: 16px;");
+
+            Label lbl = new Label(message);
+            lbl.setStyle("-fx-text-fill: white; -fx-font-size: 12px; -fx-font-weight: bold;");
+            lbl.setWrapText(true);
+
+            toast.getChildren().addAll(icon, lbl);
+            toast.setOpacity(0.0);
+            contentArea.getChildren().add(toast);
+
+            FadeTransition fadeIn = new FadeTransition(Duration.millis(250), toast);
+            fadeIn.setFromValue(0.0);
+            fadeIn.setToValue(1.0);
+
+            FadeTransition fadeOut = new FadeTransition(Duration.millis(350), toast);
+            fadeOut.setFromValue(1.0);
+            fadeOut.setToValue(0.0);
+            fadeOut.setDelay(Duration.millis(2800));
+            fadeOut.setOnFinished(e -> contentArea.getChildren().remove(toast));
+
+            SequentialTransition seq = new SequentialTransition(fadeIn, fadeOut);
+            seq.play();
+        });
     }
 
     private void setupTableColumns() {

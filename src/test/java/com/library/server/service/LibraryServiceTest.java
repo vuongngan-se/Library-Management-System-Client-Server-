@@ -368,6 +368,45 @@ public class LibraryServiceTest {
         Response clearRes = service.handleRequest(clearReq);
         assertEquals("SUCCESS", clearRes.getStatus());
     }
+
+    @Test
+    @DisplayName("Test Real-time Reactive Broadcast on Borrow and Return")
+    public void testRealtimeBroadcastOnBorrowAndReturn() {
+        // Clear history first
+        service.handleRequest(new Request("CLEAR_CHAT_HISTORY", null));
+
+        // Borrow a book
+        Map<String, Object> borrowData = new HashMap<>();
+        borrowData.put("readerId", 1);
+        borrowData.put("userId", 1);
+        borrowData.put("bookIds", Arrays.asList(101));
+        borrowData.put("days", 14);
+        Request borrowReq = new Request("BORROW_BOOKS", borrowData);
+        Response borrowRes = service.handleRequest(borrowReq);
+        assertEquals("SUCCESS", borrowRes.getStatus());
+
+        // Verify broadcast event was generated
+        List<com.library.common.model.ChatMessage> history = com.library.server.net.ChatManager.getHistory();
+        assertFalse(history.isEmpty());
+        com.library.common.model.ChatMessage latestMsg = history.get(history.size() - 1);
+        assertEquals("SYNC_BOOKS", latestMsg.getType());
+        assertTrue(latestMsg.getMessage().contains("Kho sách đã cập nhật tự động"));
+
+        // Extract borrowingId and return book
+        Map<?, ?> borrowingObj = (Map<?, ?>) com.library.common.protocol.NetworkUtils.getMapper().convertValue(borrowRes.getData(), Map.class);
+        int borrowingId = Integer.parseInt(borrowingObj.get("borrowingId").toString());
+        Map<String, Object> returnData = new HashMap<>();
+        returnData.put("borrowingId", borrowingId);
+        Request returnReq = new Request("RETURN_BOOKS", returnData);
+        Response returnRes = service.handleRequest(returnReq);
+        assertEquals("SUCCESS", returnRes.getStatus());
+
+        // Verify return broadcast event
+        List<com.library.common.model.ChatMessage> updatedHistory = com.library.server.net.ChatManager.getHistory();
+        com.library.common.model.ChatMessage returnMsg = updatedHistory.get(updatedHistory.size() - 1);
+        assertEquals("SYNC_BOOKS", returnMsg.getType());
+        assertTrue(returnMsg.getMessage().contains("Sách đã trở lại kho"));
+    }
 }
 
 

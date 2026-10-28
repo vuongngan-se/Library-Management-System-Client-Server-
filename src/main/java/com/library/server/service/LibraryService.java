@@ -196,6 +196,7 @@ public class LibraryService {
         }
         boolean ok = InMemoryStore.saveBook(book);
         if (ok) {
+            ChatManager.broadcast(new ChatMessage("SYSTEM", "Hệ thống", "SYSTEM", "Thông tin sách '" + book.getTitle() + "' đã được cập nhật.", "SYNC_BOOKS"));
             return Response.success("Lưu thông tin sách thành công", book);
         }
         return Response.error("Thất bại khi lưu thông tin sách.");
@@ -212,6 +213,7 @@ public class LibraryService {
 
         boolean ok = InMemoryStore.deleteBook(bookId);
         if (ok) {
+            ChatManager.broadcast(new ChatMessage("SYSTEM", "Hệ thống", "SYSTEM", "Một đầu sách (ID: " + bookId + ") đã được xóa khỏi hệ thống.", "SYNC_BOOKS"));
             return Response.success("Xóa sách thành công", bookId);
         }
         return Response.error("Không thể xóa sách.");
@@ -224,6 +226,7 @@ public class LibraryService {
         }
         boolean ok = InMemoryStore.saveReader(reader);
         if (ok) {
+            ChatManager.broadcast(new ChatMessage("SYSTEM", "Hệ thống", "SYSTEM", "Thông tin độc giả '" + reader.getFullName() + "' đã được lưu.", "SYNC_READERS"));
             return Response.success("Lưu thông tin độc giả thành công", reader);
         }
         return Response.error("Thất bại khi lưu độc giả.");
@@ -283,6 +286,8 @@ public class LibraryService {
         borrowing.setDetails(details);
         InMemoryStore.saveBorrowing(borrowing);
         borrowingsStore.put(borrowing.getBorrowingId(), borrowing);
+
+        ChatManager.broadcast(new ChatMessage("SYSTEM", "Hệ thống", "SYSTEM", "Phiếu mượn #" + borrowing.getBorrowingId() + " vừa được tạo. Kho sách đã cập nhật tự động.", "SYNC_BOOKS"));
 
         return Response.success("Tạo phiếu mượn sách thành công", borrowing);
     }
@@ -347,6 +352,8 @@ public class LibraryService {
         InMemoryStore.updateBorrowing(b);
         borrowingsStore.put(borrowingId, b);
 
+        ChatManager.broadcast(new ChatMessage("SYSTEM", "Hệ thống", "SYSTEM", "Phiếu mượn #" + borrowingId + " vừa hoàn tất trả sách. Sách đã trở lại kho.", "SYNC_BOOKS"));
+
         return Response.success("Xử lý trả sách thành công", b);
     }
 
@@ -372,6 +379,7 @@ public class LibraryService {
         boolean ok = InMemoryStore.renewBorrowing(borrowingId, extraDays);
         if (ok) {
             Borrowing updated = InMemoryStore.findBorrowingById(borrowingId);
+            ChatManager.broadcast(new ChatMessage("SYSTEM", "Hệ thống", "SYSTEM", "Phiếu mượn #" + borrowingId + " vừa được gia hạn thêm " + extraDays + " ngày.", "SYNC_BOOKS"));
             return Response.success("Gia hạn mượn sách thành công! Hạn trả mới: " + (updated != null ? updated.getDueDate() : ""), updated);
         }
         return Response.error("Không thể gia hạn phiếu mượn.");
@@ -394,6 +402,7 @@ public class LibraryService {
 
         boolean ok = InMemoryStore.payFine(fineId);
         if (ok) {
+            ChatManager.broadcast(new ChatMessage("SYSTEM", "Hệ thống", "SYSTEM", "Phiếu phạt #" + fineId + " vừa được thanh toán thành công.", "SYNC_FINES"));
             return Response.success("Thu tiền phạt thành công!", fineId);
         }
         return Response.error("Không thể cập nhật trạng thái phiếu phạt.");
