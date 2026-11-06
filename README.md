@@ -46,6 +46,7 @@ Hệ thống quản lý thư viện được phát triển theo kiến trúc Cli
 * **Quản lý Tiền phạt & Vi phạm**: Theo dõi danh sách phiếu phạt do trễ hạn/làm hỏng sách, tự động tính tiền phạt khi trả trễ (5.000đ/ngày) và xác nhận thu tiền phạt (`PAID`).
 * **Thống kê Dashboard & Biểu đồ trực quan**: Biểu đồ PieChart cơ cấu thể loại, BarChart top sách mượn nhiều nhất có Tooltip chi tiết; hỗ trợ chuyển đổi Giao diện Tối (Dark Mode).
 * **Bảng Soi Gói Tin Mạng Thời Gian Thực (Mini-Wireshark Packet Inspector)**: Tích hợp trực tiếp màn hình bắt và phân tích gói tin mạng (TCP Request/Response, UDP Broadcast Discovery, HTTP Web Portal) với đầy đủ Timestamp, Giao thức, Chiều truyền (TX ➔ / RX ⬅), Kích thước (Bytes), Endpoint và Cửa sổ soi Payload JSON chi tiết. Hỗ trợ bộ lọc nhanh theo giao thức (Tất cả, TCP, UDP), tìm kiếm từ khóa payload, tính năng Tạm dừng/Tiếp tục bắt gói tin và Xóa log.
+* **Mã Hóa Đường Truyền Socket & Chống Nghe Lén (Hybrid Cryptography: RSA-2048 + AES-256)**: Bảo mật an toàn kênh truyền Socket bằng kiến trúc lai ghép giống chuẩn TLS/HTTPS: Quy trình bắt tay trao đổi khóa bí mật RSA-2048 kết hợp mã hóa luồng dữ liệu Request/Response bằng khối đối xứng AES-256-CBC với IV ngẫu nhiên 16 bytes. Hỗ trợ công tắc Bật/Tắt mã hóa trực tiếp trên giao diện để đối chiếu trực quan sự khác biệt giữa Plaintext và Ciphertext trên bảng Packet Inspector.
 * **Chế độ dữ liệu linh hoạt**: Tự động kết nối MySQL (hỗ trợ cả mật khẩu thường lẫn trống), tự động chuyển sang In-Memory Fallback nếu chưa bật CSDL.
 
 ---
@@ -130,7 +131,11 @@ Hệ thống quản lý thư viện được phát triển theo kiến trúc Cli
    - Vào tab **"Mạng"** -> Cuộn tới phần **"Mini-Wireshark Packet Inspector"**.
    - Mọi thao tác gửi Request/nhận Response qua TCP, gói broadcast UDP và HTTP request đều lập tức hiện lên bảng theo dõi với timestamp micro-giây, giao thức, chiều gửi/nhận (TX/RX), dung lượng và endpoint.
    - Nhấp vào bất kỳ hàng nào để xem toàn bộ cấu trúc Payload JSON ở khung bên dưới. Dùng bộ lọc `TCP`, `UDP`, tìm kiếm từ khóa, tạm dừng soi hoặc xóa log.
-3. **Cổng Web Di Động (HTTP Server 8080 & Mã QR)**:
+3. **Mã Hóa Đường Truyền & Chống Nghe Lén (Hybrid RSA-2048 + AES-256)**:
+   - Ban đầu để chế độ Plaintext: Thực hiện tra cứu sách hoặc đăng nhập, chỉ cho giảng viên xem trên bảng Packet Inspector payload JSON hiển thị rõ ràng từng trường thông tin.
+   - Nhấn nút **"🔒 Kích hoạt Mã hóa AES-256"**: Ứng dụng tự động kích hoạt quy trình Bắt tay Handshake (Server cấp RSA Public Key ➔ Client sinh khóa AES-256 và mã hóa gửi về). Huy hiệu chuyển sang `[🔒 ĐÃ BẢO MẬT (RSA-2048 + AES-256)]`.
+   - Bấm **"🧪 Gửi thử Gói tin"** hoặc tiếp tục mượn/trả sách: Mọi gói tin gửi/nhận trên socket đều được mã hóa thành Ciphertext (nhãn `🔒 ENCRYPTED`). Dù có kẻ xấu cắm Wireshark trên mạng LAN cũng không thể giải mã hay đọc trộm được dữ liệu.
+4. **Cổng Web Di Động (HTTP Server 8080 & Mã QR)**:
    - Mở tab **"Mạng"**, bấm **"Tạo Mã QR Truy Cập"** để sinh mã QR liên kết tới địa chỉ mạng LAN của Server (ví dụ `http://192.168.1.15:8080`).
    - Lấy camera điện thoại quét mã QR hoặc mở trình duyệt web điện thoại: xem ngay danh mục sách và số lượng socket trực tuyến theo thời gian thực mà không cần cài app Client JavaFX.
 4. **Giả lập Môi Trường Mạng & Chống DoS (Rate Limiting)**:

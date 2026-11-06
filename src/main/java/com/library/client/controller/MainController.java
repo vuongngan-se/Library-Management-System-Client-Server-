@@ -206,6 +206,10 @@ public class MainController {
     @FXML private CheckBox chkRateLimit;
     @FXML private CheckBox chkJitter;
 
+    // Socket Encryption & Anti-Sniffing (Hybrid RSA + AES)
+    @FXML private Label lblEncryptionStatus;
+    @FXML private Button btnToggleEncryption;
+
     // Real-time Packet Inspector (Mini-Wireshark)
     @FXML private TableView<NetworkPacket> tblPackets;
     @FXML private TableColumn<NetworkPacket, String> colPktTime;
@@ -645,6 +649,9 @@ public class MainController {
                 txtSearchPacket.textProperty().addListener((obs, oldVal, newVal) -> applyPacketFilters());
             }
         }
+
+        // Khởi tạo trạng thái mã hóa đường truyền Socket
+        updateEncryptionUI();
     }
 
     private void applyPacketFilters() {
@@ -695,6 +702,59 @@ public class MainController {
         if (btnFilterUdpPackets != null) btnFilterUdpPackets.setStyle("");
         if (activeBtn != null) {
             activeBtn.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold;");
+        }
+    }
+
+    private void updateEncryptionUI() {
+        boolean enc = socketClient.isEncryptionEnabled();
+        if (lblEncryptionStatus != null) {
+            if (enc) {
+                lblEncryptionStatus.setText("🔒 ĐÃ BẢO MẬT (RSA-2048 + AES-256) - CHỐNG NGHE LÉN TOÀN DIỆN");
+                lblEncryptionStatus.setStyle("-fx-background-color: #059669; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 4 10; -fx-background-radius: 12; -fx-font-size: 11px;");
+            } else {
+                lblEncryptionStatus.setText("🔓 CHẾ ĐỘ RÕ (PLAINTEXT) - CÓ THỂ BỊ NGHE LÉN TRÊN MẠNG");
+                lblEncryptionStatus.setStyle("-fx-background-color: #dc2626; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 4 10; -fx-background-radius: 12; -fx-font-size: 11px;");
+            }
+        }
+        if (btnToggleEncryption != null) {
+            if (enc) {
+                btnToggleEncryption.setText("🔓 Tắt Mã Hóa (Trở về Plaintext)");
+                btnToggleEncryption.setStyle("-fx-background-color: #ef4444; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8 16; -fx-background-radius: 6; -fx-cursor: hand;");
+            } else {
+                btnToggleEncryption.setText("🔒 Kích hoạt Mã hóa AES-256");
+                btnToggleEncryption.setStyle("-fx-background-color: #10b981; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8 16; -fx-background-radius: 6; -fx-cursor: hand;");
+            }
+        }
+    }
+
+    @FXML
+    public void handleToggleEncryption() {
+        try {
+            if (socketClient.isEncryptionEnabled()) {
+                socketClient.disableEncryption();
+                showLiveToast("🔓 Đã tắt mã hóa Socket. Kênh truyền trở lại dạng Plaintext.");
+            } else {
+                boolean ok = socketClient.enableEncryption();
+                if (ok) {
+                    showLiveToast("🔒 Bắt tay RSA thành công! Toàn bộ gói tin Socket đã được mã hóa AES-256.");
+                } else {
+                    showAlert("Lỗi", "Không thể hoàn tất bắt tay bảo mật với Máy chủ.");
+                }
+            }
+            updateEncryptionUI();
+        } catch (IOException e) {
+            showAlert("Lỗi Bắt tay Bảo Mật", e.getMessage());
+        }
+    }
+
+    @FXML
+    public void handleTestEncryptedPacket() {
+        try {
+            long rtt = socketClient.measurePing();
+            updateEncryptionUI();
+            showLiveToast("🧪 Đã truyền gói tin thử nghiệm qua Socket (Độ trễ: " + rtt + " ms). Xem ngay bảng Mini-Wireshark bên dưới!");
+        } catch (IOException e) {
+            showAlert("Lỗi truyền tin", e.getMessage());
         }
     }
 

@@ -47,3 +47,4 @@ public class NetworkPacket implements Serializable {
     public String getPayload() { return payload; }
     public void setPayload(String payload) { this.payload = payload; }
 }
+

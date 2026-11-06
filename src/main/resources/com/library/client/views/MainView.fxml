@@ -476,6 +476,36 @@
                                         </children>
                                     </VBox>
 
+                                    <!-- Hybrid Encryption & Anti-Sniffing Card -->
+                                    <VBox spacing="10.0" styleClass="card" style="-fx-border-color: #8b5cf6; -fx-border-width: 1.5; -fx-border-radius: 8;">
+                                        <children>
+                                            <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                                <children>
+                                                    <Label styleClass="card-title" text="🔒 Bảo Mật Đường Truyền &amp; Chống Nghe Lén (Hybrid Cryptography: RSA-2048 + AES-256)" style="-fx-text-fill: #7c3aed;" />
+                                                    <Region HBox.hgrow="ALWAYS" />
+                                                    <Label fx:id="lblEncryptionStatus" text="🔓 CHẾ ĐỘ RÕ (PLAINTEXT) - CÓ THỂ BỊ NGHE LÉN TRÊN MẠNG"
+                                                           style="-fx-background-color: #dc2626; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 4 10; -fx-background-radius: 12; -fx-font-size: 11px;" />
+                                                </children>
+                                            </HBox>
+                                            <HBox alignment="CENTER_LEFT" spacing="15.0">
+                                                <children>
+                                                    <VBox spacing="4.0" HBox.hgrow="ALWAYS">
+                                                        <children>
+                                                            <Label text="Kiến trúc: Bắt tay trao đổi khóa (Handshake RSA-2048) ➔ Mã hóa dòng dữ liệu (Payload AES-256 CBC + Random IV 16-byte)."
+                                                                   style="-fx-font-size: 12px; -fx-text-fill: #64748b;" />
+                                                            <Label text="Kịch bản Demo: Bật mã hóa và quan sát trên bảng Mini-Wireshark: Payload JSON nhạy cảm sẽ được mã hóa thành Ciphertext, bảo vệ an toàn khỏi Wireshark LAN."
+                                                                   style="-fx-font-size: 12px; -fx-text-fill: #059669; -fx-font-weight: bold;" />
+                                                        </children>
+                                                    </VBox>
+                                                    <Button fx:id="btnToggleEncryption" onAction="#handleToggleEncryption" text="🔒 Kích hoạt Mã hóa AES-256"
+                                                            style="-fx-background-color: #10b981; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8 16; -fx-background-radius: 6; -fx-cursor: hand;" />
+                                                    <Button onAction="#handleTestEncryptedPacket" text="🧪 Gửi thử Gói tin" styleClass="btn-primary"
+                                                            style="-fx-padding: 8 16; -fx-cursor: hand;" />
+                                                </children>
+                                            </HBox>
+                                        </children>
+                                    </VBox>
+
                                     <!-- Real-time Packet Inspector (Mini-Wireshark) Card -->
                                     <VBox spacing="10.0" styleClass="card" style="-fx-border-color: #27ae60; -fx-border-width: 1.5; -fx-border-radius: 8;">
                                         <children>
