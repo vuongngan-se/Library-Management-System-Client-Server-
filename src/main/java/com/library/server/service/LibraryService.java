@@ -201,6 +201,13 @@ public class LibraryService {
         User newUser = new User(0, username, password, fullName, role, "ACTIVE");
         boolean ok = InMemoryStore.registerUser(newUser);
         if (ok) {
+            // Tự động tạo hồ sơ thẻ độc giả tương ứng trong bảng readers nếu chưa tồn tại
+            boolean hasReader = InMemoryStore.getAllReaders().stream()
+                    .anyMatch(r -> r.getFullName() != null && r.getFullName().equalsIgnoreCase(fullName));
+            if (!hasReader) {
+                Reader newReader = new Reader(0, fullName, "", "", "", "ACTIVE");
+                InMemoryStore.saveReader(newReader);
+            }
             User safeUser = new User(newUser.getUserId(), newUser.getUsername(), null, newUser.getFullName(), newUser.getRole(), newUser.getStatus());
             return Response.success("Đăng ký tài khoản thành công!", safeUser);
         }
