@@ -2,6 +2,7 @@ package com.library.client.controller;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.library.client.net.ChatClientListener;
+import com.library.client.net.PacketInspector;
 import com.library.client.net.SocketClient;
 import com.library.common.model.*;
 import com.library.common.protocol.Request;
@@ -204,6 +205,24 @@ public class MainController {
     @FXML private Slider sliderLatency;
     @FXML private CheckBox chkRateLimit;
     @FXML private CheckBox chkJitter;
+
+    // Real-time Packet Inspector (Mini-Wireshark)
+    @FXML private TableView<NetworkPacket> tblPackets;
+    @FXML private TableColumn<NetworkPacket, String> colPktTime;
+    @FXML private TableColumn<NetworkPacket, String> colPktProtocol;
+    @FXML private TableColumn<NetworkPacket, String> colPktDirection;
+    @FXML private TableColumn<NetworkPacket, String> colPktEndpoint;
+    @FXML private TableColumn<NetworkPacket, String> colPktSummary;
+    @FXML private TableColumn<NetworkPacket, Integer> colPktSize;
+    @FXML private TableColumn<NetworkPacket, String> colPktPayload;
+    @FXML private TextArea txtPacketDetail;
+    @FXML private TextField txtSearchPacket;
+    @FXML private Button btnPausePackets;
+    @FXML private Button btnFilterAllPackets;
+    @FXML private Button btnFilterTcpPackets;
+    @FXML private Button btnFilterUdpPackets;
+    private javafx.collections.transformation.FilteredList<NetworkPacket> filteredPackets;
+    private String currentProtocolFilter = "ALL";
 
     // Users Module
     @FXML private TextField txtSearchUser;
@@ -597,6 +616,109 @@ public class MainController {
                 }
                 return new javafx.beans.property.SimpleStringProperty("N/A");
             });
+        }
+
+        // Packet Inspector (Mini-Wireshark)
+        if (tblPackets != null) {
+            colPktTime.setCellValueFactory(new PropertyValueFactory<>("timestamp"));
+            colPktProtocol.setCellValueFactory(new PropertyValueFactory<>("protocol"));
+            colPktDirection.setCellValueFactory(new PropertyValueFactory<>("direction"));
+            colPktEndpoint.setCellValueFactory(new PropertyValueFactory<>("endpoint"));
+            colPktSummary.setCellValueFactory(new PropertyValueFactory<>("summary"));
+            colPktSize.setCellValueFactory(new PropertyValueFactory<>("sizeBytes"));
+            colPktPayload.setCellValueFactory(new PropertyValueFactory<>("payload"));
+
+            filteredPackets = new javafx.collections.transformation.FilteredList<>(PacketInspector.getInstance().getPackets(), p -> true);
+            tblPackets.setItems(filteredPackets);
+
+            tblPackets.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
+                if (newVal != null && txtPacketDetail != null) {
+                    txtPacketDetail.setText(
+                            "[" + newVal.getTimestamp() + "] Giao thức: " + newVal.getProtocol() + " (" + newVal.getDirection() + ") • Đích/Nguồn: " + newVal.getEndpoint() + "\n" +
+                            "Tóm tắt: " + newVal.getSummary() + " • Kích thước: " + newVal.getSizeBytes() + " bytes\n" +
+                            "Payload Data:\n" + newVal.getPayload()
+                    );
+                }
+            });
+
+            if (txtSearchPacket != null) {
+                txtSearchPacket.textProperty().addListener((obs, oldVal, newVal) -> applyPacketFilters());
+            }
+        }
+    }
+
+    private void applyPacketFilters() {
+        if (filteredPackets == null) return;
+        String keyword = txtSearchPacket != null && txtSearchPacket.getText() != null
+                ? txtSearchPacket.getText().trim().toLowerCase() : "";
+
+        filteredPackets.setPredicate(pkt -> {
+            if (pkt == null) return false;
+            // 1. Kiểm tra lọc giao thức
+            if (!"ALL".equalsIgnoreCase(currentProtocolFilter) && !currentProtocolFilter.equalsIgnoreCase(pkt.getProtocol())) {
+                return false;
+            }
+            // 2. Kiểm tra từ khóa
+            if (!keyword.isEmpty()) {
+                return (pkt.getSummary() != null && pkt.getSummary().toLowerCase().contains(keyword)) ||
+                       (pkt.getPayload() != null && pkt.getPayload().toLowerCase().contains(keyword)) ||
+                       (pkt.getEndpoint() != null && pkt.getEndpoint().toLowerCase().contains(keyword));
+            }
+            return true;
+        });
+    }
+
+    @FXML
+    public void filterPacketsAll() {
+        currentProtocolFilter = "ALL";
+        updatePacketFilterButtonsStyle(btnFilterAllPackets);
+        applyPacketFilters();
+    }
+
+    @FXML
+    public void filterPacketsTcp() {
+        currentProtocolFilter = "TCP";
+        updatePacketFilterButtonsStyle(btnFilterTcpPackets);
+        applyPacketFilters();
+    }
+
+    @FXML
+    public void filterPacketsUdp() {
+        currentProtocolFilter = "UDP";
+        updatePacketFilterButtonsStyle(btnFilterUdpPackets);
+        applyPacketFilters();
+    }
+
+    private void updatePacketFilterButtonsStyle(Button activeBtn) {
+        if (btnFilterAllPackets != null) btnFilterAllPackets.setStyle("");
+        if (btnFilterTcpPackets != null) btnFilterTcpPackets.setStyle("");
+        if (btnFilterUdpPackets != null) btnFilterUdpPackets.setStyle("");
+        if (activeBtn != null) {
+            activeBtn.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold;");
+        }
+    }
+
+    @FXML
+    public void handleTogglePausePackets() {
+        PacketInspector inspector = PacketInspector.getInstance();
+        boolean nextState = !inspector.isPaused();
+        inspector.setPaused(nextState);
+        if (btnPausePackets != null) {
+            if (nextState) {
+                btnPausePackets.setText("▶️ Tiếp tục soi");
+                btnPausePackets.setStyle("-fx-background-color: #2ecc71; -fx-text-fill: white; -fx-font-weight: bold;");
+            } else {
+                btnPausePackets.setText("⏸️ Tạm dừng");
+                btnPausePackets.setStyle("");
+            }
+        }
+    }
+
+    @FXML
+    public void handleClearPackets() {
+        PacketInspector.getInstance().clear();
+        if (txtPacketDetail != null) {
+            txtPacketDetail.clear();
         }
     }
 

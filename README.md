@@ -45,6 +45,7 @@ Hệ thống quản lý thư viện được phát triển theo kiến trúc Cli
 * **Gia hạn Sách Mượn**: Gia hạn thời hạn mượn thêm 7 ngày trực tiếp trên giao diện chỉ với 1 cú click.
 * **Quản lý Tiền phạt & Vi phạm**: Theo dõi danh sách phiếu phạt do trễ hạn/làm hỏng sách, tự động tính tiền phạt khi trả trễ (5.000đ/ngày) và xác nhận thu tiền phạt (`PAID`).
 * **Thống kê Dashboard & Biểu đồ trực quan**: Biểu đồ PieChart cơ cấu thể loại, BarChart top sách mượn nhiều nhất có Tooltip chi tiết; hỗ trợ chuyển đổi Giao diện Tối (Dark Mode).
+* **Bảng Soi Gói Tin Mạng Thời Gian Thực (Mini-Wireshark Packet Inspector)**: Tích hợp trực tiếp màn hình bắt và phân tích gói tin mạng (TCP Request/Response, UDP Broadcast Discovery, HTTP Web Portal) với đầy đủ Timestamp, Giao thức, Chiều truyền (TX ➔ / RX ⬅), Kích thước (Bytes), Endpoint và Cửa sổ soi Payload JSON chi tiết. Hỗ trợ bộ lọc nhanh theo giao thức (Tất cả, TCP, UDP), tìm kiếm từ khóa payload, tính năng Tạm dừng/Tiếp tục bắt gói tin và Xóa log.
 * **Chế độ dữ liệu linh hoạt**: Tự động kết nối MySQL (hỗ trợ cả mật khẩu thường lẫn trống), tự động chuyển sang In-Memory Fallback nếu chưa bật CSDL.
 
 ---
@@ -121,10 +122,22 @@ Hệ thống quản lý thư viện được phát triển theo kiến trúc Cli
    Tại màn hình Đăng nhập, người dùng chỉ cần nhấn nút **"🔍 Dò tìm Server"** — hệ thống sẽ tự động gửi gói tin UDP Broadcast để tìm IP máy chủ Server và tự động điền vào ô IP/Port mà không cần gõ thủ công! (Hoặc có thể nhập IP thủ công ví dụ `192.168.1.15` và Port `8888`).
 
 
-  6. Kịch bản demo 2 máy thể hiện rõ kiến trúc Client-Server và tính đồng bộ qua TCP Socket:
+### 6. Các Kịch Bản Demo Nổi Bật Dành Cho Giảng Viên
 
-Chuẩn bị: Máy 1 chạy ServerApp và MySQL. Máy 1 (Client 1) và Máy 2 (Client 2) cùng nhập địa chỉ IP của Máy 1 và cổng 8888 để kết nối.
-Đồng bộ dữ liệu: Máy 1 thực hiện mượn 1 cuốn sách, Máy 2 ấn tra cứu lại ngay lập tức để giảng viên thấy số lượng tồn trong MySQL giảm đi 1.
-Xử lý đa luồng: Đăng nhập 2 tài khoản tại 2 máy và gửi yêu cầu đồng thời để chứng minh Server lắng nghe và xử lý nhiều luồng Thread song song.
-Quản lý kết nối: Tắt đột ngột Client ở Máy 2, chỉ cho giảng viên xem log tại Server ghi nhận ngắt kết nối an toàn mà hệ thống vẫn hoạt động bình thường.
+1. **Dò tìm Server tự động bằng UDP Broadcast**:
+   - Tại màn hình Login, nhấn nút **"🔍 Dò tìm Server"**. Client tự động broadcast gói tin UDP trên cổng `8889`, nhận phản hồi chứa IP/Port của Server và tự điền mà không cần gõ tay.
+2. **Soi Gói Tin Mạng Thời Gian Thực (Mini-Wireshark Packet Inspector)**:
+   - Vào tab **"Mạng"** -> Cuộn tới phần **"Mini-Wireshark Packet Inspector"**.
+   - Mọi thao tác gửi Request/nhận Response qua TCP, gói broadcast UDP và HTTP request đều lập tức hiện lên bảng theo dõi với timestamp micro-giây, giao thức, chiều gửi/nhận (TX/RX), dung lượng và endpoint.
+   - Nhấp vào bất kỳ hàng nào để xem toàn bộ cấu trúc Payload JSON ở khung bên dưới. Dùng bộ lọc `TCP`, `UDP`, tìm kiếm từ khóa, tạm dừng soi hoặc xóa log.
+3. **Cổng Web Di Động (HTTP Server 8080 & Mã QR)**:
+   - Mở tab **"Mạng"**, bấm **"Tạo Mã QR Truy Cập"** để sinh mã QR liên kết tới địa chỉ mạng LAN của Server (ví dụ `http://192.168.1.15:8080`).
+   - Lấy camera điện thoại quét mã QR hoặc mở trình duyệt web điện thoại: xem ngay danh mục sách và số lượng socket trực tuyến theo thời gian thực mà không cần cài app Client JavaFX.
+4. **Giả lập Môi Trường Mạng & Chống DoS (Rate Limiting)**:
+   - Kéo thanh trượt **Mô Phỏng Độ Trễ Mạng** (0 - 500ms): huy hiệu độ trễ RTT trên góc phải ứng dụng đổi màu xanh/vàng/đỏ và hiển thị đúng số ms trễ thực tế.
+   - Bấm nút **"Test bắn DoS thử"**: Server kích hoạt cơ chế Rate Limiting (chặn spam quá 15 req/s) và trả về thông báo lỗi quá tải `429 Too Many Requests` an toàn.
+5. **Đồng bộ Dữ liệu & Đa Luồng trên 2 Máy**:
+   - **Đồng bộ dữ liệu**: Máy 1 thực hiện mượn 1 cuốn sách, Máy 2 ấn tra cứu lại ngay lập tức để thấy số lượng tồn trong CSDL giảm đi 1.
+   - **Xử lý đa luồng**: Đăng nhập 2 tài khoản tại 2 máy và gửi yêu cầu đồng thời để chứng minh Server lắng nghe và phục vụ song song trên các thread riêng biệt.
+   - **Quản lý kết nối**: Tắt đột ngột Client ở Máy 2, chỉ cho giảng viên xem log tại Server ghi nhận ngắt kết nối an toàn mà không làm sập tiến trình Server.
 

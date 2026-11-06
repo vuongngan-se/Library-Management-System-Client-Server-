@@ -50,6 +50,7 @@ public class DiscoveryClient {
             socket.setSoTimeout(timeoutMs);
 
             byte[] sendData = DISCOVERY_REQUEST.getBytes(StandardCharsets.UTF_8);
+            PacketInspector.getInstance().recordUdpOut("255.255.255.255:" + DISCOVERY_PORT, DISCOVERY_REQUEST);
 
             // 1. Thử gửi tới địa chỉ broadcast chung
             try {
@@ -93,6 +94,7 @@ public class DiscoveryClient {
             socket.receive(receivePacket);
 
             String message = new String(receivePacket.getData(), 0, receivePacket.getLength(), StandardCharsets.UTF_8).trim();
+            PacketInspector.getInstance().recordUdpIn(receivePacket.getAddress().getHostAddress() + ":" + receivePacket.getPort(), message);
             if (message.startsWith(DISCOVERY_RESPONSE_PREFIX)) {
                 String[] parts = message.split(":", 3);
                 int tcpPort = 8888;

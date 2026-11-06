@@ -54,8 +54,23 @@ public class SocketClient {
                 throw new IOException("Không thể kết nối đến Máy chủ " + serverHost + ":" + serverPort);
             }
         }
+
+        // Ghi nhận gói tin TCP gửi đi (TX) cho Packet Inspector
+        try {
+            String reqJson = NetworkUtils.getMapper().writeValueAsString(req);
+            PacketInspector.getInstance().recordTcpOut(serverHost, serverPort, req.getAction(), reqJson);
+        } catch (Exception ignored) {}
+
         NetworkUtils.sendJson(dos, req);
-        return NetworkUtils.readJson(dis, Response.class);
+        Response resp = NetworkUtils.readJson(dis, Response.class);
+
+        // Ghi nhận gói tin TCP nhận về (RX) cho Packet Inspector
+        try {
+            String respJson = NetworkUtils.getMapper().writeValueAsString(resp);
+            PacketInspector.getInstance().recordTcpIn(serverHost, serverPort, resp.getStatus(), respJson);
+        } catch (Exception ignored) {}
+
+        return resp;
     }
 
     /**

@@ -360,7 +360,7 @@
             </VBox>
 
             <!-- Network Monitor View -->
-            <VBox fx:id="viewNetwork" spacing="20.0" visible="false">
+            <VBox fx:id="viewNetwork" spacing="15.0" visible="false">
                 <children>
                     <HBox alignment="CENTER_LEFT" spacing="10.0">
                         <children>
@@ -373,108 +373,158 @@
                         </children>
                     </HBox>
 
-                    <!-- Network Metric Summary Cards -->
-                    <GridPane hgap="20.0" vgap="20.0">
-                        <columnConstraints>
-                            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
-                            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
-                            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
-                        </columnConstraints>
-                        <rowConstraints>
-                            <RowConstraints minHeight="10.0" prefHeight="95.0" vgrow="SOMETIMES" />
-                        </rowConstraints>
-                        <children>
-                            <VBox styleClass="metric-card, metric-card-blue" GridPane.columnIndex="0">
+                    <ScrollPane fitToWidth="true" styleClass="content-scrollpane" VBox.vgrow="ALWAYS">
+                        <content>
+                            <VBox spacing="18.0">
                                 <children>
-                                    <Label styleClass="metric-title" text="CLIENT ĐANG KẾT NỐI (ONLINE)" />
-                                    <Label fx:id="lblStatActiveClients" styleClass="metric-value" text="0" />
-                                </children>
-                            </VBox>
-                            <VBox styleClass="metric-card, metric-card-green" GridPane.columnIndex="1">
-                                <children>
-                                    <Label styleClass="metric-title" text="TỔNG REQUEST ĐÃ XỬ LÝ" />
-                                    <Label fx:id="lblStatTotalRequests" styleClass="metric-value" text="0" />
-                                </children>
-                            </VBox>
-                            <VBox styleClass="metric-card, metric-card-purple" GridPane.columnIndex="2">
-                                <children>
-                                    <Label styleClass="metric-title" text="CỔNG DỊCH VỤ SERVER" />
-                                    <Label fx:id="lblStatServerPort" styleClass="metric-value" text="TCP: 8888" />
-                                </children>
-                            </VBox>
-                        </children>
-                    </GridPane>
-
-                    <!-- Network Simulation & Security Defense Control Card -->
-                    <VBox spacing="12.0" styleClass="card" style="-fx-border-color: #3498db; -fx-border-width: 1.5; -fx-border-radius: 8;">
-                        <children>
-                            <HBox alignment="CENTER_LEFT" spacing="10.0">
-                                <children>
-                                    <Label styleClass="card-title" text="🎛️ Bảng Điều Khiển Giả Lập Mạng &amp; Phòng Thủ DoS (Network Simulator &amp; Security)" style="-fx-text-fill: #2980b9;" />
-                                    <Region HBox.hgrow="ALWAYS" />
-                                    <Label fx:id="lblDefenseBadge" text="🛡️ Chống DoS: ĐANG BẢO VỆ" style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 3 8; -fx-background-radius: 12; -fx-font-size: 11px;" />
-                                </children>
-                            </HBox>
-                            
-                            <HBox alignment="CENTER_LEFT" spacing="20.0">
-                                <children>
-                                    <!-- Latency Slider Control -->
-                                    <VBox spacing="6.0" HBox.hgrow="ALWAYS">
+                                    <!-- Network Metric Summary Cards -->
+                                    <GridPane hgap="20.0" vgap="20.0">
+                                        <columnConstraints>
+                                            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                                            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                                            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                                        </columnConstraints>
+                                        <rowConstraints>
+                                            <RowConstraints minHeight="10.0" prefHeight="95.0" vgrow="SOMETIMES" />
+                                        </rowConstraints>
                                         <children>
-                                            <HBox alignment="CENTER_LEFT">
+                                            <VBox styleClass="metric-card, metric-card-blue" GridPane.columnIndex="0">
                                                 <children>
-                                                    <Label text="Giả lập độ trễ mạng (Simulated Latency):" style="-fx-font-weight: bold;" />
+                                                    <Label styleClass="metric-title" text="CLIENT ĐANG KẾT NỐI (ONLINE)" />
+                                                    <Label fx:id="lblStatActiveClients" styleClass="metric-value" text="0" />
+                                                </children>
+                                            </VBox>
+                                            <VBox styleClass="metric-card, metric-card-green" GridPane.columnIndex="1">
+                                                <children>
+                                                    <Label styleClass="metric-title" text="TỔNG REQUEST ĐÃ XỬ LÝ" />
+                                                    <Label fx:id="lblStatTotalRequests" styleClass="metric-value" text="0" />
+                                                </children>
+                                            </VBox>
+                                            <VBox styleClass="metric-card, metric-card-purple" GridPane.columnIndex="2">
+                                                <children>
+                                                    <Label styleClass="metric-title" text="CỔNG DỊCH VỤ SERVER" />
+                                                    <Label fx:id="lblStatServerPort" styleClass="metric-value" text="TCP: 8888" />
+                                                </children>
+                                            </VBox>
+                                        </children>
+                                    </GridPane>
+
+                                    <!-- Network Simulation & Security Defense Control Card -->
+                                    <VBox spacing="12.0" styleClass="card" style="-fx-border-color: #3498db; -fx-border-width: 1.5; -fx-border-radius: 8;">
+                                        <children>
+                                            <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                                <children>
+                                                    <Label styleClass="card-title" text="🎛️ Bảng Điều Khiển Giả Lập Mạng &amp; Phòng Thủ DoS (Network Simulator &amp; Security)" style="-fx-text-fill: #2980b9;" />
                                                     <Region HBox.hgrow="ALWAYS" />
-                                                    <Label fx:id="lblSimulatedLatencyVal" text="0 ms (LAN chuẩn)" style="-fx-text-fill: #e67e22; -fx-font-weight: bold;" />
+                                                    <Label fx:id="lblDefenseBadge" text="🛡️ Chống DoS: ĐANG BẢO VỆ" style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 3 8; -fx-background-radius: 12; -fx-font-size: 11px;" />
                                                 </children>
                                             </HBox>
-                                            <Slider fx:id="sliderLatency" max="500.0" min="0.0" majorTickUnit="100.0" minorTickCount="3" showTickLabels="true" showTickMarks="true" value="0.0" />
+                                            
+                                            <HBox alignment="CENTER_LEFT" spacing="20.0">
+                                                <children>
+                                                    <!-- Latency Slider Control -->
+                                                    <VBox spacing="6.0" HBox.hgrow="ALWAYS">
+                                                        <children>
+                                                            <HBox alignment="CENTER_LEFT">
+                                                                <children>
+                                                                    <Label text="Giả lập độ trễ mạng (Simulated Latency):" style="-fx-font-weight: bold;" />
+                                                                    <Region HBox.hgrow="ALWAYS" />
+                                                                    <Label fx:id="lblSimulatedLatencyVal" text="0 ms (LAN chuẩn)" style="-fx-text-fill: #e67e22; -fx-font-weight: bold;" />
+                                                                </children>
+                                                            </HBox>
+                                                            <Slider fx:id="sliderLatency" max="500.0" min="0.0" majorTickUnit="100.0" minorTickCount="3" showTickLabels="true" showTickMarks="true" value="0.0" />
+                                                        </children>
+                                                    </VBox>
+
+                                                    <!-- Security & Jitter Checkboxes -->
+                                                    <VBox spacing="8.0" prefWidth="250.0">
+                                                        <children>
+                                                            <CheckBox fx:id="chkRateLimit" selected="true" text="Bật phòng thủ Flood / DoS (15 req/s)" style="-fx-font-weight: bold;" />
+                                                            <CheckBox fx:id="chkJitter" text="Mô phỏng dao động Jitter (±20ms)" />
+                                                        </children>
+                                                    </VBox>
+
+                                                    <!-- Action Buttons -->
+                                                    <VBox spacing="6.0" prefWidth="170.0" alignment="CENTER">
+                                                        <children>
+                                                            <Button maxWidth="Infinity" onAction="#handleApplyNetworkSimulation" styleClass="btn-primary" text="⚙️ Áp dụng cấu hình" />
+                                                            <Button maxWidth="Infinity" onAction="#handleTestDosFlood" styleClass="btn-danger" text="⚡ Test bắn DoS thử" />
+                                                        </children>
+                                                    </VBox>
+                                                </children>
+                                            </HBox>
                                         </children>
                                     </VBox>
 
-                                    <!-- Security & Jitter Checkboxes -->
-                                    <VBox spacing="8.0" prefWidth="250.0">
+                                    <!-- Sessions Table -->
+                                    <VBox styleClass="card" spacing="10.0">
                                         <children>
-                                            <CheckBox fx:id="chkRateLimit" selected="true" text="Bật phòng thủ Flood / DoS (15 req/s)" style="-fx-font-weight: bold;" />
-                                            <CheckBox fx:id="chkJitter" text="Mô phỏng dao động Jitter (±20ms)" />
+                                            <Label styleClass="card-title" text="Danh sách các phiên làm việc (Active TCP Sockets)" />
+                                            <TableView fx:id="tblClientSessions" prefHeight="170.0">
+                                                <columns>
+                                                    <TableColumn fx:id="colSessionId" prefWidth="110.0" text="Mã phiên" />
+                                                    <TableColumn fx:id="colSessionIp" prefWidth="120.0" text="Địa chỉ IP" />
+                                                    <TableColumn fx:id="colSessionPort" prefWidth="80.0" text="Cổng Port" />
+                                                    <TableColumn fx:id="colSessionUser" prefWidth="130.0" text="Tài khoản" />
+                                                    <TableColumn fx:id="colSessionFullName" prefWidth="160.0" text="Họ và tên" />
+                                                    <TableColumn fx:id="colSessionRole" prefWidth="90.0" text="Vai trò" />
+                                                    <TableColumn fx:id="colSessionConnectedAt" prefWidth="150.0" text="Thời điểm kết nối" />
+                                                    <TableColumn fx:id="colSessionRequests" prefWidth="80.0" text="Số Request" />
+                                                    <TableColumn fx:id="colSessionLastAction" prefWidth="130.0" text="Lệnh gần nhất" />
+                                                </columns>
+                                            </TableView>
                                         </children>
                                     </VBox>
 
-                                    <!-- Action Buttons -->
-                                    <VBox spacing="6.0" prefWidth="170.0" alignment="CENTER">
+                                    <!-- Real-time Packet Inspector (Mini-Wireshark) Card -->
+                                    <VBox spacing="10.0" styleClass="card" style="-fx-border-color: #27ae60; -fx-border-width: 1.5; -fx-border-radius: 8;">
                                         <children>
-                                            <Button maxWidth="Infinity" onAction="#handleApplyNetworkSimulation" styleClass="btn-primary" text="⚙️ Áp dụng cấu hình" />
-                                            <Button maxWidth="Infinity" onAction="#handleTestDosFlood" styleClass="btn-danger" text="⚡ Test bắn DoS thử" />
+                                            <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                                <children>
+                                                    <Label styleClass="card-title" text="📡 Bảng Soi Gói Tin Mạng (Packet Inspector / Mini-Wireshark)" style="-fx-text-fill: #27ae60;" />
+                                                    <Region HBox.hgrow="ALWAYS" />
+                                                    <!-- Filter buttons -->
+                                                    <HBox spacing="6.0" alignment="CENTER_LEFT">
+                                                        <children>
+                                                            <Button fx:id="btnFilterAllPackets" onAction="#filterPacketsAll" styleClass="btn-secondary" text="Tất cả" />
+                                                            <Button fx:id="btnFilterTcpPackets" onAction="#filterPacketsTcp" styleClass="btn-secondary" text="TCP" />
+                                                            <Button fx:id="btnFilterUdpPackets" onAction="#filterPacketsUdp" styleClass="btn-secondary" text="UDP" />
+                                                        </children>
+                                                    </HBox>
+                                                    <TextField fx:id="txtSearchPacket" prefWidth="170.0" promptText="🔍 Lọc từ khóa payload..." />
+                                                    <Button fx:id="btnPausePackets" onAction="#handleTogglePausePackets" styleClass="btn-warning" text="⏸️ Tạm dừng" />
+                                                    <Button onAction="#handleClearPackets" styleClass="btn-secondary" text="🧹 Xóa log" />
+                                                </children>
+                                            </HBox>
+
+                                            <!-- Table of Captured Packets -->
+                                            <TableView fx:id="tblPackets" prefHeight="220.0">
+                                                <columns>
+                                                    <TableColumn fx:id="colPktTime" prefWidth="95.0" text="Thời gian" />
+                                                    <TableColumn fx:id="colPktProtocol" prefWidth="65.0" text="Giao thức" />
+                                                    <TableColumn fx:id="colPktDirection" prefWidth="65.0" text="Hướng" />
+                                                    <TableColumn fx:id="colPktEndpoint" prefWidth="150.0" text="Địa chỉ / Cổng" />
+                                                    <TableColumn fx:id="colPktSummary" prefWidth="200.0" text="Tóm tắt gói tin" />
+                                                    <TableColumn fx:id="colPktSize" prefWidth="75.0" text="Kích thước" />
+                                                    <TableColumn fx:id="colPktPayload" prefWidth="300.0" text="Nội dung Payload (JSON / Data)" />
+                                                </columns>
+                                            </TableView>
+
+                                            <!-- Selected Packet Hex / JSON Inspector Box -->
+                                            <VBox spacing="4.0" style="-fx-background-color: #1e293b; -fx-padding: 8 12; -fx-background-radius: 6;">
+                                                <children>
+                                                    <Label text="Chi tiết Payload gói tin đã chọn (Packet Inspector):" style="-fx-text-fill: #94a3b8; -fx-font-size: 11px; -fx-font-weight: bold;" />
+                                                    <TextArea fx:id="txtPacketDetail" editable="false" prefRowCount="3" wrapText="true"
+                                                              style="-fx-control-inner-background: #0f172a; -fx-text-fill: #38bdf8; -fx-font-family: 'Consolas', 'Courier New', monospace; -fx-font-size: 11px;"
+                                                              promptText="Chọn một gói tin trong bảng trên để xem chi tiết mã JSON và header..." />
+                                                </children>
+                                            </VBox>
                                         </children>
                                     </VBox>
                                 </children>
-                            </HBox>
-                        </children>
-                    </VBox>
-
-                    <!-- Sessions Table -->
-                    <VBox styleClass="card" VBox.vgrow="ALWAYS">
-                        <children>
-                            <Label styleClass="card-title" text="Danh sách các phiên làm việc (Active TCP Sockets)">
-                                <VBox.margin>
-                                    <Insets bottom="10.0" />
-                                </VBox.margin>
-                            </Label>
-                            <TableView fx:id="tblClientSessions" VBox.vgrow="ALWAYS">
-                                <columns>
-                                    <TableColumn fx:id="colSessionId" prefWidth="110.0" text="Mã phiên" />
-                                    <TableColumn fx:id="colSessionIp" prefWidth="120.0" text="Địa chỉ IP" />
-                                    <TableColumn fx:id="colSessionPort" prefWidth="80.0" text="Cổng Port" />
-                                    <TableColumn fx:id="colSessionUser" prefWidth="130.0" text="Tài khoản" />
-                                    <TableColumn fx:id="colSessionFullName" prefWidth="160.0" text="Họ và tên" />
-                                    <TableColumn fx:id="colSessionRole" prefWidth="90.0" text="Vai trò" />
-                                    <TableColumn fx:id="colSessionConnectedAt" prefWidth="150.0" text="Thời điểm kết nối" />
-                                    <TableColumn fx:id="colSessionRequests" prefWidth="80.0" text="Số Request" />
-                                    <TableColumn fx:id="colSessionLastAction" prefWidth="130.0" text="Lệnh gần nhất" />
-                                </columns>
-                            </TableView>
-                        </children>
-                    </VBox>
+                            </VBox>
+                        </content>
+                    </ScrollPane>
                 </children>
             </VBox>
 
