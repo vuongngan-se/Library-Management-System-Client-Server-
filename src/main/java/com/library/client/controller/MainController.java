@@ -38,6 +38,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
@@ -943,6 +945,80 @@ public class MainController {
                 showAlert("Lỗi kết nối", e.getMessage());
             }
         }
+    }
+
+    @FXML
+    public void handleOpenMobilePortal() {
+        String host = socketClient.getServerHost();
+        if ("127.0.0.1".equals(host) || "localhost".equalsIgnoreCase(host)) {
+            host = "localhost";
+        }
+        String url = "http://" + host + ":8080/";
+        try {
+            if (java.awt.Desktop.isDesktopSupported() && java.awt.Desktop.getDesktop().isSupported(java.awt.Desktop.Action.BROWSE)) {
+                java.awt.Desktop.getDesktop().browse(new java.net.URI(url));
+            } else {
+                showAlert("Cổng Web Di Động", "Trình duyệt không hỗ trợ mở tự động.\nVui lòng mở trình duyệt và truy cập: " + url);
+            }
+        } catch (Exception e) {
+            showAlert("Truy cập Web Portal", "Mở trình duyệt Web tại địa chỉ:\n" + url);
+        }
+    }
+
+    @FXML
+    public void handleShowMobilePortalQr() {
+        String host = socketClient.getServerHost();
+        if ("localhost".equalsIgnoreCase(host) || "127.0.0.1".equals(host)) {
+            host = getLocalLanIp();
+        }
+        String portalUrl = "http://" + host + ":8080/";
+
+        Image qrImage = QRCodeUtils.generateQRCode(portalUrl, 260, 260);
+
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("Mã QR Cổng Web Di Động");
+        dialog.setHeaderText("Quét mã QR bằng Camera điện thoại hoặc Zalo");
+
+        VBox content = new VBox(12);
+        content.setAlignment(Pos.CENTER);
+        content.setPadding(new Insets(15));
+
+        if (qrImage != null) {
+            ImageView iv = new ImageView(qrImage);
+            iv.setFitWidth(260);
+            iv.setFitHeight(260);
+            content.getChildren().add(iv);
+        }
+
+        Label lblUrl = new Label("URL: " + portalUrl);
+        lblUrl.setStyle("-fx-font-weight: bold; -fx-text-fill: #2980b9; -fx-font-size: 13px;");
+
+        Label lblTip = new Label("💡 Kết nối điện thoại và máy chủ vào cùng mạng Wi-Fi/LAN để truy cập.");
+        lblTip.setStyle("-fx-font-size: 11px; -fx-text-fill: #7f8c8d;");
+
+        content.getChildren().addAll(lblUrl, lblTip);
+
+        dialog.getDialogPane().setContent(content);
+        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+        dialog.showAndWait();
+    }
+
+    private String getLocalLanIp() {
+        try {
+            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+            while (interfaces.hasMoreElements()) {
+                NetworkInterface iface = interfaces.nextElement();
+                if (iface.isLoopback() || !iface.isUp()) continue;
+                Enumeration<InetAddress> addresses = iface.getInetAddresses();
+                while (addresses.hasMoreElements()) {
+                    InetAddress addr = addresses.nextElement();
+                    if (!addr.isLoopbackAddress() && addr.getHostAddress().indexOf(':') == -1) {
+                        return addr.getHostAddress();
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+        return "127.0.0.1";
     }
 
     @FXML

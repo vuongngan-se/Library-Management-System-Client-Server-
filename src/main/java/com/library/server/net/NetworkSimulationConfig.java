@@ -41,3 +41,4 @@ public class NetworkSimulationConfig {
         maxRequestsPerSecond = Math.max(1, maxReq);
     }
 }
+

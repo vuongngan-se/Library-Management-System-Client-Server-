@@ -362,10 +362,12 @@
             <!-- Network Monitor View -->
             <VBox fx:id="viewNetwork" spacing="20.0" visible="false">
                 <children>
-                    <HBox alignment="CENTER_LEFT" spacing="15.0">
+                    <HBox alignment="CENTER_LEFT" spacing="10.0">
                         <children>
-                            <Label styleClass="view-title" text="🌐 Giám sát Kết nối Mạng TCP Socket thời gian thực" />
+                            <Label styleClass="view-title" text="🌐 Giám sát Mạng &amp; Cổng Web Di Động (HTTP 8080)" />
                             <Region HBox.hgrow="ALWAYS" />
+                            <Button onAction="#handleOpenMobilePortal" styleClass="btn-info" text="📱 Mở Web Portal" />
+                            <Button onAction="#handleShowMobilePortalQr" styleClass="btn-success" text="📲 QR Di Động" />
                             <Button onAction="#handleRefreshSessions" styleClass="btn-secondary" text="🔄 Làm mới" />
                             <Button onAction="#handleKickSelectedSession" styleClass="btn-danger" text="⛔ Ngắt kết nối Client" />
                         </children>

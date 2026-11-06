@@ -3,6 +3,7 @@ package com.library.server;
 import com.library.server.config.DatabaseConfig;
 import com.library.server.net.ClientHandler;
 import com.library.server.net.DiscoveryServer;
+import com.library.server.net.EmbeddedHttpServer;
 import com.library.server.service.LibraryService;
 
 import java.io.IOException;
@@ -15,6 +16,7 @@ public class ServerApp {
     private static final int PORT = 8888;
     private static final ExecutorService threadPool = Executors.newCachedThreadPool();
     private static DiscoveryServer discoveryServer;
+    private static EmbeddedHttpServer httpServer;
 
     public static void main(String[] args) {
         System.out.println("=== HỆ THỐNG MÁY CHỦ QUẢN LÝ THƯ VIỆN (TCP SERVER) ===");
@@ -27,18 +29,26 @@ public class ServerApp {
         DatabaseConfig.init(jdbcUrl, user, pass);
         LibraryService service = new LibraryService();
 
-        // Kích hoạt dịch vụ UDP Discovery tự động dò tìm máy chủ trong mạng LAN
+        // 1. Kích hoạt dịch vụ UDP Discovery tự động dò tìm máy chủ trong mạng LAN (Cổng UDP 8889)
         discoveryServer = new DiscoveryServer(PORT, "SmartLib Server");
         discoveryServer.start();
+
+        // 2. Kích hoạt Mini Web Portal cho Điện thoại di động & REST API (Cổng HTTP 8080)
+        httpServer = new EmbeddedHttpServer();
+        httpServer.start();
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             if (discoveryServer != null) {
                 discoveryServer.stop();
             }
+            if (httpServer != null) {
+                httpServer.stop();
+            }
         }));
 
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
             System.out.println("Server đã sẵn sàng và đang lắng nghe tại cổng TCP: " + PORT);
+            System.out.println(">> Web Portal di động: http://" + EmbeddedHttpServer.getLocalIpAddress() + ":8080");
             
             while (true) {
                 Socket clientSocket = serverSocket.accept();
@@ -49,6 +59,9 @@ public class ServerApp {
         } finally {
             if (discoveryServer != null) {
                 discoveryServer.stop();
+            }
+            if (httpServer != null) {
+                httpServer.stop();
             }
             threadPool.shutdown();
         }
