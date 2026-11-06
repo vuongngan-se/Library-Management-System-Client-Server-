@@ -67,3 +67,4 @@ public class CryptoUtilsTest {
         assertEquals(message, CryptoUtils.decryptAes(cipher2, key));
     }
 }
+
