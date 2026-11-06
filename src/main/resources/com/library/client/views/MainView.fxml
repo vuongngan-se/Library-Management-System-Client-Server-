@@ -403,6 +403,53 @@
                         </children>
                     </GridPane>
 
+                    <!-- Network Simulation & Security Defense Control Card -->
+                    <VBox spacing="12.0" styleClass="card" style="-fx-border-color: #3498db; -fx-border-width: 1.5; -fx-border-radius: 8;">
+                        <children>
+                            <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                <children>
+                                    <Label styleClass="card-title" text="🎛️ Bảng Điều Khiển Giả Lập Mạng &amp; Phòng Thủ DoS (Network Simulator &amp; Security)" style="-fx-text-fill: #2980b9;" />
+                                    <Region HBox.hgrow="ALWAYS" />
+                                    <Label fx:id="lblDefenseBadge" text="🛡️ Chống DoS: ĐANG BẢO VỆ" style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 3 8; -fx-background-radius: 12; -fx-font-size: 11px;" />
+                                </children>
+                            </HBox>
+                            
+                            <HBox alignment="CENTER_LEFT" spacing="20.0">
+                                <children>
+                                    <!-- Latency Slider Control -->
+                                    <VBox spacing="6.0" HBox.hgrow="ALWAYS">
+                                        <children>
+                                            <HBox alignment="CENTER_LEFT">
+                                                <children>
+                                                    <Label text="Giả lập độ trễ mạng (Simulated Latency):" style="-fx-font-weight: bold;" />
+                                                    <Region HBox.hgrow="ALWAYS" />
+                                                    <Label fx:id="lblSimulatedLatencyVal" text="0 ms (LAN chuẩn)" style="-fx-text-fill: #e67e22; -fx-font-weight: bold;" />
+                                                </children>
+                                            </HBox>
+                                            <Slider fx:id="sliderLatency" max="500.0" min="0.0" majorTickUnit="100.0" minorTickCount="3" showTickLabels="true" showTickMarks="true" value="0.0" />
+                                        </children>
+                                    </VBox>
+
+                                    <!-- Security & Jitter Checkboxes -->
+                                    <VBox spacing="8.0" prefWidth="250.0">
+                                        <children>
+                                            <CheckBox fx:id="chkRateLimit" selected="true" text="Bật phòng thủ Flood / DoS (15 req/s)" style="-fx-font-weight: bold;" />
+                                            <CheckBox fx:id="chkJitter" text="Mô phỏng dao động Jitter (±20ms)" />
+                                        </children>
+                                    </VBox>
+
+                                    <!-- Action Buttons -->
+                                    <VBox spacing="6.0" prefWidth="170.0" alignment="CENTER">
+                                        <children>
+                                            <Button maxWidth="Infinity" onAction="#handleApplyNetworkSimulation" styleClass="btn-primary" text="⚙️ Áp dụng cấu hình" />
+                                            <Button maxWidth="Infinity" onAction="#handleTestDosFlood" styleClass="btn-danger" text="⚡ Test bắn DoS thử" />
+                                        </children>
+                                    </VBox>
+                                </children>
+                            </HBox>
+                        </children>
+                    </VBox>
+
                     <!-- Sessions Table -->
                     <VBox styleClass="card" VBox.vgrow="ALWAYS">
                         <children>

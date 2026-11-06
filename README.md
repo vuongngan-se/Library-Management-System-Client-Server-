@@ -35,6 +35,8 @@ Hệ thống quản lý thư viện được phát triển theo kiến trúc Cli
 * **UDP Auto-Discovery**: Client tự động phát hiện địa chỉ IP & Port của Server trong mạng LAN qua gói tin UDP Broadcast (Port 8889) mà không cần gõ IP thủ công.
 * **Ping / Pong Heartbeat & Đo độ trễ (RTT)**: Kiểm tra nhịp tim socket định kỳ và hiển thị độ trễ mạng thời gian thực (ms) ngay trên thanh tiêu đề ứng dụng.
 * **Cổng Độc giả (USER Portal)**: Tab "Sách Của Tôi" dành riêng cho tài khoản độc giả tra cứu các sách đang mượn và gửi yêu cầu gia hạn trực tuyến (+7 ngày) chỉ với 1 click.
+* **Giả lập Môi trường Mạng & Jitter (ADMIN)**: Thanh trượt mô phỏng độ trễ (0 - 500ms) và dao động Jitter (±20ms) thời gian thực trên tab Giám sát Mạng, tác động tức thì lên badge RTT của các máy Client.
+* **Cơ chế Phòng thủ DoS & Rate Limiting**: Tự động giới hạn tần suất gửi yêu cầu an toàn (15 req/s) để chống spam socket, kèm nút "Test bắn DoS thử" minh họa trực quan khả năng phòng vệ của Server khi báo cáo đồ án.
 * **Kênh Chat Nội bộ Thời Gian Thực**: Trò chuyện trực tuyến giữa các nhân viên thủ thư và quản trị viên, tự động đồng bộ sự kiện kho sách theo thời gian thực.
 * **Quản lý Sách**: Thêm, sửa, xóa, tìm kiếm theo tiêu đề/tác giả/thể loại/ISBN, theo dõi tồn kho và số lượng khả dụng.
 * **Quản lý Độc giả**: Thêm, sửa, xem thông tin liên lạc, địa chỉ và trạng thái thẻ độc giả.

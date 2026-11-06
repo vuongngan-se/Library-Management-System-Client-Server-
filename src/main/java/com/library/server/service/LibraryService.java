@@ -85,6 +85,10 @@ public class LibraryService {
                     return handleFulfillReservation(data);
                 case "GET_ACTIVE_SESSIONS":
                     return handleGetActiveSessions();
+                case "GET_NETWORK_SIM_CONFIG":
+                    return handleGetNetworkSimConfig();
+                case "SET_NETWORK_SIM_CONFIG":
+                    return handleSetNetworkSimConfig(data);
                 case "KICK_SESSION":
                     return handleKickSession(data);
                 case "GET_USERS":
@@ -654,6 +658,50 @@ public class LibraryService {
         } else {
             return Response.error("Không tìm thấy phiên kết nối đang mở với mã: " + sessionId);
         }
+    }
+
+    private Response handleGetNetworkSimConfig() {
+        Map<String, Object> map = new HashMap<>();
+        map.put("simulatedLatencyMs", com.library.server.net.NetworkSimulationConfig.getSimulatedLatencyMs());
+        map.put("jitterEnabled", com.library.server.net.NetworkSimulationConfig.isJitterEnabled());
+        map.put("rateLimitEnabled", com.library.server.net.NetworkSimulationConfig.isRateLimitEnabled());
+        map.put("maxRequestsPerSecond", com.library.server.net.NetworkSimulationConfig.getMaxRequestsPerSecond());
+        return Response.success("Lấy cấu hình mô phỏng mạng thành công", map);
+    }
+
+    private Response handleSetNetworkSimConfig(Object data) {
+        if (data == null) {
+            return Response.error("Dữ liệu cấu hình không hợp lệ.");
+        }
+        Map<?, ?> map = mapper.convertValue(data, Map.class);
+        if (map.containsKey("simulatedLatencyMs")) {
+            try {
+                int lat = Integer.parseInt(map.get("simulatedLatencyMs").toString());
+                com.library.server.net.NetworkSimulationConfig.setSimulatedLatencyMs(lat);
+            } catch (Exception ignored) {}
+        }
+        if (map.containsKey("jitterEnabled")) {
+            boolean jitter = Boolean.parseBoolean(map.get("jitterEnabled").toString());
+            com.library.server.net.NetworkSimulationConfig.setJitterEnabled(jitter);
+        }
+        if (map.containsKey("rateLimitEnabled")) {
+            boolean rl = Boolean.parseBoolean(map.get("rateLimitEnabled").toString());
+            com.library.server.net.NetworkSimulationConfig.setRateLimitEnabled(rl);
+        }
+        if (map.containsKey("maxRequestsPerSecond")) {
+            try {
+                int maxReq = Integer.parseInt(map.get("maxRequestsPerSecond").toString());
+                com.library.server.net.NetworkSimulationConfig.setMaxRequestsPerSecond(maxReq);
+            } catch (Exception ignored) {}
+        }
+
+        ChatManager.broadcast(new ChatMessage("SYSTEM", "Hệ thống", "ADMIN",
+                "⚙️ [Mô phỏng mạng] Độ trễ giả lập = " + com.library.server.net.NetworkSimulationConfig.getSimulatedLatencyMs() + "ms, " +
+                "Chống DoS = " + (com.library.server.net.NetworkSimulationConfig.isRateLimitEnabled() ? "BẬT" : "TẮT") + " (" +
+                com.library.server.net.NetworkSimulationConfig.getMaxRequestsPerSecond() + " req/s)",
+                "SYNC_NETWORK"));
+
+        return handleGetNetworkSimConfig();
     }
 
     private Response handleAddUser(Object data) {

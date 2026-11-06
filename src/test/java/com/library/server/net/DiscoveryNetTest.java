@@ -39,3 +39,4 @@ public class DiscoveryNetTest {
         assertNotNull(result.getHost(), "Host IP không được rỗng");
     }
 }
+

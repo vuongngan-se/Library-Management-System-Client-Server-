@@ -19,6 +19,10 @@ public class ClientHandler implements Runnable {
     private final String clientAddress;
     private final String sessionId;
 
+    // Rate Limiting Window Tracking
+    private long windowStartMillis = System.currentTimeMillis();
+    private int requestCountInWindow = 0;
+
     public ClientHandler(Socket socket, LibraryService service) {
         this.socket = socket;
         this.service = service;
@@ -60,6 +64,37 @@ public class ClientHandler implements Runnable {
                 if (request == null) break;
                 System.out.println("[" + sessionId + " - " + clientAddress + "] Lệnh nhận được: " + request.getAction());
                 ClientSessionManager.recordRequest(sessionId, request.getAction());
+
+                // 1. Kiểm tra Rate Limiting & DoS Protection (Chống spam request)
+                if (NetworkSimulationConfig.isRateLimitEnabled()) {
+                    long now = System.currentTimeMillis();
+                    if (now - windowStartMillis > 1000) {
+                        windowStartMillis = now;
+                        requestCountInWindow = 0;
+                    }
+                    requestCountInWindow++;
+                    if (requestCountInWindow > NetworkSimulationConfig.getMaxRequestsPerSecond()) {
+                        System.err.println("[SECURITY ALERT] Chặn Request Flooding từ " + clientAddress + " (" + requestCountInWindow + " req/s)!");
+                        Response blockedResp = Response.error(
+                                "🛡️ [SECURITY DEFENSE] Tần suất gửi yêu cầu quá nhanh (" + requestCountInWindow + " req/giây > " +
+                                        NetworkSimulationConfig.getMaxRequestsPerSecond() + " req/s). Yêu cầu đã bị hệ thống phòng thủ DoS chặn tạm thời!"
+                        );
+                        NetworkUtils.sendJson(dos, blockedResp);
+                        continue;
+                    }
+                }
+
+                // 2. Mô phỏng độ trễ mạng (Network Latency & Jitter Simulation)
+                int latency = NetworkSimulationConfig.getSimulatedLatencyMs();
+                if (latency > 0) {
+                    if (NetworkSimulationConfig.isJitterEnabled()) {
+                        int jitter = (int) ((Math.random() * 40) - 20); // Dao động ±20ms
+                        latency = Math.max(0, latency + jitter);
+                    }
+                    try {
+                        Thread.sleep(latency);
+                    } catch (InterruptedException ignored) {}
+                }
 
                 Response response = service.handleRequest(request);
 

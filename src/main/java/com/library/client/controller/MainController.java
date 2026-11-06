@@ -196,6 +196,13 @@ public class MainController {
     @FXML private TableColumn<ClientSession, Integer> colSessionRequests;
     @FXML private TableColumn<ClientSession, String> colSessionLastAction;
 
+    // Network Simulation & DoS Defense Controls
+    @FXML private Label lblDefenseBadge;
+    @FXML private Label lblSimulatedLatencyVal;
+    @FXML private Slider sliderLatency;
+    @FXML private CheckBox chkRateLimit;
+    @FXML private CheckBox chkJitter;
+
     // Users Module
     @FXML private TextField txtSearchUser;
     @FXML private TableView<User> tblUsers;
@@ -235,6 +242,14 @@ public class MainController {
         if (cbUserStatus != null) {
             cbUserStatus.setItems(FXCollections.observableArrayList("ACTIVE", "LOCKED"));
             cbUserStatus.getSelectionModel().select("ACTIVE");
+        }
+        if (sliderLatency != null) {
+            sliderLatency.valueProperty().addListener((obs, oldVal, newVal) -> {
+                int val = newVal.intValue();
+                if (lblSimulatedLatencyVal != null) {
+                    lblSimulatedLatencyVal.setText(val + " ms" + (val == 0 ? " (LAN chuẩn)" : ""));
+                }
+            });
         }
     }
 
@@ -746,6 +761,7 @@ public class MainController {
     public void showNetwork() {
         setActiveNav(btnNavNetwork, viewNetwork);
         loadNetworkSessions();
+        loadNetworkSimConfig();
     }
 
     @FXML
@@ -982,6 +998,114 @@ public class MainController {
             } catch (IOException e) {
                 showAlert("Lỗi truyền tin Socket", e.getMessage());
             }
+        }
+    }
+
+    private void loadNetworkSimConfig() {
+        try {
+            Response resp = socketClient.sendRequest(new Request("GET_NETWORK_SIM_CONFIG", null));
+            if ("SUCCESS".equals(resp.getStatus()) && resp.getData() instanceof Map) {
+                Map<?, ?> map = (Map<?, ?>) resp.getData();
+                int latency = Integer.parseInt(map.get("simulatedLatencyMs").toString());
+                boolean jitter = Boolean.parseBoolean(map.get("jitterEnabled").toString());
+                boolean rateLimit = Boolean.parseBoolean(map.get("rateLimitEnabled").toString());
+
+                if (sliderLatency != null) sliderLatency.setValue(latency);
+                if (chkJitter != null) chkJitter.setSelected(jitter);
+                if (chkRateLimit != null) chkRateLimit.setSelected(rateLimit);
+                if (lblSimulatedLatencyVal != null) {
+                    lblSimulatedLatencyVal.setText(latency + " ms" + (latency == 0 ? " (LAN chuẩn)" : ""));
+                }
+                updateDefenseBadgeUI(rateLimit);
+            }
+        } catch (IOException ignored) {}
+    }
+
+    private void updateDefenseBadgeUI(boolean active) {
+        if (lblDefenseBadge == null) return;
+        if (active) {
+            lblDefenseBadge.setText("🛡️ Chống DoS: ĐANG BẢO VỆ");
+            lblDefenseBadge.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 3 8; -fx-background-radius: 12; -fx-font-size: 11px;");
+        } else {
+            lblDefenseBadge.setText("⚠ Chống DoS: ĐÃ TẮT");
+            lblDefenseBadge.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 3 8; -fx-background-radius: 12; -fx-font-size: 11px;");
+        }
+    }
+
+    @FXML
+    public void handleApplyNetworkSimulation() {
+        int latency = sliderLatency != null ? (int) sliderLatency.getValue() : 0;
+        boolean jitter = chkJitter != null && chkJitter.isSelected();
+        boolean rateLimit = chkRateLimit != null && chkRateLimit.isSelected();
+
+        Map<String, Object> reqData = new HashMap<>();
+        reqData.put("simulatedLatencyMs", latency);
+        reqData.put("jitterEnabled", jitter);
+        reqData.put("rateLimitEnabled", rateLimit);
+
+        try {
+            Response resp = socketClient.sendRequest(new Request("SET_NETWORK_SIM_CONFIG", reqData));
+            if ("SUCCESS".equals(resp.getStatus())) {
+                updateDefenseBadgeUI(rateLimit);
+                showLiveToast("⚙️ Đã áp dụng: Delay = " + latency + "ms, Jitter = " + (jitter ? "BẬT" : "TẮT") + ", Chống DoS = " + (rateLimit ? "BẬT" : "TẮT"));
+            } else {
+                showAlert("Lỗi", resp.getMessage());
+            }
+        } catch (IOException e) {
+            showAlert("Lỗi kết nối", e.getMessage());
+        }
+    }
+
+    @FXML
+    public void handleTestDosFlood() {
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Kiểm thử Tấn công DoS / Request Flooding");
+        confirm.setHeaderText("Bắn liên tục 20 requests đến Server trong tích tắc?");
+        confirm.setContentText("Kịch bản này nhằm kiểm tra cơ chế Rate Limiting & DoS Defense của Server khi có Client cố tình spam socket.");
+
+        Optional<ButtonType> result = confirm.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            new Thread(() -> {
+                int totalSent = 20;
+                int passed = 0;
+                int blocked = 0;
+                StringBuilder alertDetails = new StringBuilder();
+
+                for (int i = 1; i <= totalSent; i++) {
+                    try {
+                        Map<String, Object> pingData = new HashMap<>();
+                        pingData.put("clientTime", System.currentTimeMillis());
+                        Response res = socketClient.sendRequest(new Request("PING", pingData));
+                        if ("SUCCESS".equals(res.getStatus())) {
+                            passed++;
+                        } else {
+                            blocked++;
+                            if (alertDetails.length() == 0 && res.getMessage() != null) {
+                                alertDetails.append(res.getMessage());
+                            }
+                        }
+                    } catch (Exception e) {
+                        blocked++;
+                    }
+                }
+
+                final int finalPassed = passed;
+                final int finalBlocked = blocked;
+                Platform.runLater(() -> {
+                    loadNetworkSessions();
+                    Alert report = new Alert(Alert.AlertType.INFORMATION);
+                    report.setTitle("Kết quả Kiểm thử DoS Flooding");
+                    report.setHeaderText("Đã bắn " + totalSent + " requests liên tiếp tới TCP Server!");
+                    report.setContentText(
+                            "✓ Số request xử lý thành công: " + finalPassed + "\n" +
+                            "🛡️ Số request bị chặn bởi DoS Defense: " + finalBlocked + "\n\n" +
+                            (finalBlocked > 0
+                                    ? "=> Hệ thống phòng vệ DoS trên Server đã phát hiện và chặn spam thành công!\nThông điệp từ Server: " + alertDetails
+                                    : "=> Toàn bộ requests được thông qua (Do cơ chế phòng thủ đang tắt hoặc ngưỡng giới hạn cao).")
+                    );
+                    report.showAndWait();
+                });
+            }, "DoS-Test-Thread").start();
         }
     }
 

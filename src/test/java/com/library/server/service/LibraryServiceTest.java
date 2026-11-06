@@ -561,6 +561,37 @@ public class LibraryServiceTest {
         Map<?, ?> updatedBorrowing = com.library.common.protocol.NetworkUtils.getMapper().convertValue(listAfter.get(0), Map.class);
         assertNotEquals(oldDueDate, updatedBorrowing.get("dueDate").toString(), "Hạn trả mới phải khác hạn trả cũ");
     }
+
+    @Test
+    @DisplayName("Test Network Simulation & Security Config (Latency, Jitter, Rate Limiting)")
+    public void testNetworkSimulationConfigGetAndSet() {
+        // 1. Set configuration
+        Map<String, Object> setReq = new HashMap<>();
+        setReq.put("simulatedLatencyMs", 150);
+        setReq.put("jitterEnabled", true);
+        setReq.put("rateLimitEnabled", true);
+        setReq.put("maxRequestsPerSecond", 20);
+
+        Response setRes = service.handleRequest(new Request("SET_NETWORK_SIM_CONFIG", setReq));
+        assertEquals("SUCCESS", setRes.getStatus());
+
+        // 2. Get configuration and assert
+        Response getRes = service.handleRequest(new Request("GET_NETWORK_SIM_CONFIG", null));
+        assertEquals("SUCCESS", getRes.getStatus());
+        assertNotNull(getRes.getData());
+
+        Map<?, ?> config = (Map<?, ?>) getRes.getData();
+        assertEquals(150, Integer.parseInt(config.get("simulatedLatencyMs").toString()));
+        assertTrue(Boolean.parseBoolean(config.get("jitterEnabled").toString()));
+        assertTrue(Boolean.parseBoolean(config.get("rateLimitEnabled").toString()));
+        assertEquals(20, Integer.parseInt(config.get("maxRequestsPerSecond").toString()));
+
+        // 3. Reset back to 0 for subsequent unit tests
+        setReq.put("simulatedLatencyMs", 0);
+        setReq.put("jitterEnabled", false);
+        setReq.put("maxRequestsPerSecond", 15);
+        service.handleRequest(new Request("SET_NETWORK_SIM_CONFIG", setReq));
+    }
 }
 
 
