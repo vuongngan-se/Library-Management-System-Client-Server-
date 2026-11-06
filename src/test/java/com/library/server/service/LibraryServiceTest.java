@@ -359,10 +359,30 @@ public class LibraryServiceTest {
 
         // 3. Send empty chat message should fail
         Map<String, Object> emptyMsg = new HashMap<>();
+        emptyMsg.put("senderRole", "ADMIN");
         emptyMsg.put("message", "   ");
         Request emptyReq = new Request("SEND_CHAT_MESSAGE", emptyMsg);
         Response emptyRes = service.handleRequest(emptyReq);
         assertEquals("ERROR", emptyRes.getStatus());
+
+        // 3.1. Send chat message from regular USER role should fail with permission error
+        Map<String, Object> userMsg = new HashMap<>();
+        userMsg.put("sender", "regular_user");
+        userMsg.put("senderName", "Bạn Đọc");
+        userMsg.put("senderRole", "USER");
+        userMsg.put("message", "Tin nhắn từ tài khoản không phải staff");
+        Response userRes = service.handleRequest(new Request("SEND_CHAT_MESSAGE", userMsg));
+        assertEquals("ERROR", userRes.getStatus());
+        assertTrue(userRes.getMessage().contains("Từ chối"));
+
+        // 3.2. Send chat message from STAFF role should succeed
+        Map<String, Object> staffMsg = new HashMap<>();
+        staffMsg.put("sender", "staff1");
+        staffMsg.put("senderName", "Thủ Thư");
+        staffMsg.put("senderRole", "STAFF");
+        staffMsg.put("message", "Tin nhắn từ nhân viên thư viện");
+        Response staffRes = service.handleRequest(new Request("SEND_CHAT_MESSAGE", staffMsg));
+        assertEquals("SUCCESS", staffRes.getStatus());
 
         // 4. Clear chat history
         Request clearReq = new Request("CLEAR_CHAT_HISTORY", null);
@@ -486,6 +506,60 @@ public class LibraryServiceTest {
 
         Response cancelResult = service.handleRequest(new Request("CANCEL_RESERVATION", cancelObj.getReservationId()));
         assertEquals("SUCCESS", cancelResult.getStatus());
+    }
+
+    @Test
+    @DisplayName("Test Heartbeat PING / PONG Latency Request")
+    public void testPingHeartbeat() {
+        long now = System.currentTimeMillis();
+        Map<String, Object> pingData = new HashMap<>();
+        pingData.put("clientTime", now);
+
+        Response res = service.handleRequest(new Request("PING", pingData));
+        assertEquals("SUCCESS", res.getStatus());
+        assertEquals("PONG", res.getMessage());
+
+        assertNotNull(res.getData());
+        Map<?, ?> map = (Map<?, ?>) res.getData();
+        assertEquals(now, Long.parseLong(map.get("clientTime").toString()));
+        assertTrue(Long.parseLong(map.get("serverTime").toString()) >= now);
+    }
+
+    @Test
+    @DisplayName("Test USER Portal: Get My Borrowings & Online Renewal Cycle")
+    public void testGetMyBorrowingsAndRenewCycle() {
+        // 1. Kiểm tra lấy danh sách sách của độc giả (tự động tạo phiếu mẫu nếu tài khoản mới)
+        Map<String, Object> reqData = new HashMap<>();
+        reqData.put("userId", 888);
+        reqData.put("username", "docgia_lan");
+        reqData.put("fullName", "Nguyễn Hương Lan");
+
+        Response res = service.handleRequest(new Request("GET_MY_BORROWINGS", reqData));
+        assertEquals("SUCCESS", res.getStatus());
+        assertNotNull(res.getData());
+        assertTrue(res.getData() instanceof List);
+        List<?> list = (List<?>) res.getData();
+        assertFalse(list.isEmpty(), "Danh sách mượn của độc giả không được rỗng");
+
+        // 2. Lấy borrowingId để thực hiện gia hạn
+        Map<?, ?> firstBorrowing = com.library.common.protocol.NetworkUtils.getMapper().convertValue(list.get(0), Map.class);
+        int bId = Integer.parseInt(firstBorrowing.get("borrowingId").toString());
+        String oldDueDate = firstBorrowing.get("dueDate").toString();
+
+        // 3. Thực hiện gia hạn online thêm 7 ngày
+        Map<String, Object> renewData = new HashMap<>();
+        renewData.put("borrowingId", bId);
+        renewData.put("extraDays", 7);
+
+        Response renewRes = service.handleRequest(new Request("RENEW_BORROWING", renewData));
+        assertEquals("SUCCESS", renewRes.getStatus());
+        assertTrue(renewRes.getMessage().contains("thành công"));
+
+        // 4. Kiểm tra lại danh sách đã cập nhật hạn trả mới
+        Response resAfter = service.handleRequest(new Request("GET_MY_BORROWINGS", reqData));
+        List<?> listAfter = (List<?>) resAfter.getData();
+        Map<?, ?> updatedBorrowing = com.library.common.protocol.NetworkUtils.getMapper().convertValue(listAfter.get(0), Map.class);
+        assertNotEquals(oldDueDate, updatedBorrowing.get("dueDate").toString(), "Hạn trả mới phải khác hạn trả cũ");
     }
 }
 

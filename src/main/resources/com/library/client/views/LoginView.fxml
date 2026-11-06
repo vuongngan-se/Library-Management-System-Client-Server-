@@ -23,32 +23,38 @@
                             </VBox.margin>
                         </Label>
 
-                        <!-- Server Host & Port Configuration -->
-                        <HBox spacing="10.0">
+                        <!-- Server Host & Port Configuration with UDP Auto-Discovery -->
+                        <VBox spacing="6.0">
                             <children>
-                                <VBox HBox.hgrow="ALWAYS">
+                                <HBox alignment="BOTTOM_CENTER" spacing="10.0">
                                     <children>
-                                        <Label text="Máy chủ IP:" textFill="#34495e" />
-                                        <TextField fx:id="txtHost" text="localhost" />
+                                        <VBox HBox.hgrow="ALWAYS">
+                                            <children>
+                                                <Label text="Máy chủ IP:" textFill="#34495e" />
+                                                <TextField fx:id="txtHost" promptText="VD: 192.168.1.10" text="localhost" />
+                                            </children>
+                                        </VBox>
+                                        <VBox prefWidth="85.0">
+                                            <children>
+                                                <Label text="Cổng:" textFill="#34495e" />
+                                                <TextField fx:id="txtPort" text="8888" />
+                                            </children>
+                                        </VBox>
+                                        <Button fx:id="btnDiscover" onAction="#handleDiscoverServer" styleClass="btn-secondary" text="🔍 Dò tìm Server" />
                                     </children>
-                                </VBox>
-                                <VBox prefWidth="100.0">
-                                    <children>
-                                        <Label text="Cổng:" textFill="#34495e" />
-                                        <TextField fx:id="txtPort" text="8888" />
-                                    </children>
-                                </VBox>
+                                </HBox>
+                                <Label fx:id="lblDiscoveryStatus" style="-fx-font-size: 11px; -fx-text-fill: #7f8c8d;" text="💡 Nhấn 'Dò tìm Server' để quét máy chủ tự động qua UDP Broadcast" />
                             </children>
                             <VBox.margin>
                                 <Insets bottom="15.0" />
                             </VBox.margin>
-                        </HBox>
+                        </VBox>
 
                         <!-- Auth Switch Tabs (Login / Register) -->
                         <HBox alignment="CENTER" styleClass="auth-switch-bar">
                             <children>
                                 <Button fx:id="btnSwitchLogin" maxWidth="Infinity" onAction="#showLoginForm" styleClass="auth-tab-btn, auth-tab-btn-active" text="ĐĂNG NHẬP" HBox.hgrow="ALWAYS" />
-                                <Button fx:id="btnSwitchRegister" maxWidth="Infinity" onAction="#showRegisterForm" styleClass="auth-tab-btn" text="ĐĂNG KÝ TÀI KHOẢN" HBox.hgrow="ALWAYS" />
+                                <Button fx:id="btnSwitchRegister" maxWidth="Infinity" onAction="#showRegisterForm" styleClass="auth-tab-btn" text="ĐĂNG KÝ ĐỘC GIẢ" HBox.hgrow="ALWAYS" />
                             </children>
                             <VBox.margin>
                                 <Insets bottom="15.0" />
@@ -80,8 +86,8 @@
 
                                 <HBox alignment="CENTER">
                                     <children>
-                                        <Label text="Chưa có tài khoản?" textFill="#7f8c8d" />
-                                        <Button onAction="#showRegisterForm" styleClass="btn-link" text="Đăng ký ngay" />
+                                        <Label text="Chưa có tài khoản độc giả?" textFill="#7f8c8d" />
+                                        <Button onAction="#showRegisterForm" styleClass="btn-link" text="Đăng ký Độc giả ngay" />
                                     </children>
                                     <VBox.margin>
                                         <Insets top="5.0" />
@@ -90,12 +96,18 @@
                             </children>
                         </VBox>
 
-                        <!-- FORM 2: REGISTER FORM -->
+                        <!-- FORM 2: REGISTER FORM (DÀNH RIÊNG CHO ĐỘC GIẢ) -->
                         <VBox fx:id="vboxRegister" managed="false" spacing="10.0" visible="false">
                             <children>
+                                <Label text="📖 Đăng ký tài khoản dành riêng cho Độc giả" textFill="#2980b9" style="-fx-font-weight: bold; -fx-font-size: 13px;">
+                                    <VBox.margin>
+                                        <Insets bottom="2.0" />
+                                    </VBox.margin>
+                                </Label>
+
                                 <VBox spacing="5.0">
                                     <children>
-                                        <Label text="Họ và tên:" textFill="#34495e" />
+                                        <Label text="Họ và tên độc giả:" textFill="#34495e" />
                                         <TextField fx:id="txtRegFullName" promptText="VD: Nguyễn Văn A" />
                                     </children>
                                 </VBox>
@@ -103,7 +115,7 @@
                                 <VBox spacing="5.0">
                                     <children>
                                         <Label text="Tên đăng nhập:" textFill="#34495e" />
-                                        <TextField fx:id="txtRegUsername" promptText="Tối thiểu 3 ký tự (VD: thuthu1)" />
+                                        <TextField fx:id="txtRegUsername" promptText="Tối thiểu 3 ký tự (VD: docgia_nam)" />
                                     </children>
                                 </VBox>
 
@@ -121,11 +133,17 @@
                                     </children>
                                 </VBox>
 
-                                <Button fx:id="btnRegister" maxWidth="Infinity" onAction="#handleRegister" styleClass="btn-success" text="TẠO TÀI KHOẢN">
+                                <Button fx:id="btnRegister" maxWidth="Infinity" onAction="#handleRegister" styleClass="btn-success" text="TẠO TÀI KHOẢN ĐỘC GIẢ">
                                     <VBox.margin>
                                         <Insets top="5.0" />
                                     </VBox.margin>
                                 </Button>
+
+                                <Label text="* Lưu ý: Tài khoản Thủ thư (STAFF) và Quản trị viên (ADMIN) do Quản trị viên cấp trong nội bộ hệ thống." textFill="#7f8c8d" wrapText="true" style="-fx-font-size: 11px;">
+                                    <VBox.margin>
+                                        <Insets top="2.0" />
+                                    </VBox.margin>
+                                </Label>
 
                                 <HBox alignment="CENTER">
                                     <children>

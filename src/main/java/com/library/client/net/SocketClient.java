@@ -58,6 +58,21 @@ public class SocketClient {
         return NetworkUtils.readJson(dis, Response.class);
     }
 
+    /**
+     * Đo độ trễ mạng khứ hồi (Round-Trip Time - RTT) tới Server bằng gói tin PING/PONG.
+     * @return Thời gian khứ hồi tính bằng mili-giây (ms).
+     */
+    public synchronized long measurePing() throws IOException {
+        long start = System.currentTimeMillis();
+        java.util.Map<String, Object> pingData = new java.util.HashMap<>();
+        pingData.put("clientTime", start);
+        Response resp = sendRequest(new Request("PING", pingData));
+        if ("SUCCESS".equals(resp.getStatus())) {
+            return System.currentTimeMillis() - start;
+        }
+        throw new IOException("Máy chủ không phản hồi PONG");
+    }
+
     public <T> T convertData(Object data, Class<T> clazz) {
         return NetworkUtils.getMapper().convertValue(data, clazz);
     }

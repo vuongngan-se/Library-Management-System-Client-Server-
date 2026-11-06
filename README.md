@@ -31,13 +31,17 @@ Hệ thống quản lý thư viện được phát triển theo kiến trúc Cli
 
 ## 2. Các Chức Năng Chính
 
-* **Đăng nhập & Đăng ký**: Phân quyền Quản trị viên (`ADMIN`) và Nhân viên (`STAFF`), hỗ trợ đăng ký tài khoản mới trực tiếp.
+* **Đăng nhập & Đăng ký**: Phân quyền Quản trị viên (`ADMIN`), Nhân viên (`STAFF`) và Độc giả (`USER`); hỗ trợ độc giả tự đăng ký tài khoản mới trực tiếp.
+* **UDP Auto-Discovery**: Client tự động phát hiện địa chỉ IP & Port của Server trong mạng LAN qua gói tin UDP Broadcast (Port 8889) mà không cần gõ IP thủ công.
+* **Ping / Pong Heartbeat & Đo độ trễ (RTT)**: Kiểm tra nhịp tim socket định kỳ và hiển thị độ trễ mạng thời gian thực (ms) ngay trên thanh tiêu đề ứng dụng.
+* **Cổng Độc giả (USER Portal)**: Tab "Sách Của Tôi" dành riêng cho tài khoản độc giả tra cứu các sách đang mượn và gửi yêu cầu gia hạn trực tuyến (+7 ngày) chỉ với 1 click.
+* **Kênh Chat Nội bộ Thời Gian Thực**: Trò chuyện trực tuyến giữa các nhân viên thủ thư và quản trị viên, tự động đồng bộ sự kiện kho sách theo thời gian thực.
 * **Quản lý Sách**: Thêm, sửa, xóa, tìm kiếm theo tiêu đề/tác giả/thể loại/ISBN, theo dõi tồn kho và số lượng khả dụng.
 * **Quản lý Độc giả**: Thêm, sửa, xem thông tin liên lạc, địa chỉ và trạng thái thẻ độc giả.
 * **Quản lý Mượn & Trả Sách**: Lập phiếu mượn nhiều sách cùng lúc, theo dõi hạn trả, xử lý trả sách và khôi phục số lượng tự động.
 * **Gia hạn Sách Mượn**: Gia hạn thời hạn mượn thêm 7 ngày trực tiếp trên giao diện chỉ với 1 cú click.
 * **Quản lý Tiền phạt & Vi phạm**: Theo dõi danh sách phiếu phạt do trễ hạn/làm hỏng sách, tự động tính tiền phạt khi trả trễ (5.000đ/ngày) và xác nhận thu tiền phạt (`PAID`).
-* **Thống kê Dashboard**: Tổng quan số đầu sách, tổng số bản sách, sách khả dụng, số độc giả và số phiếu mượn đang kích hoạt.
+* **Thống kê Dashboard & Biểu đồ trực quan**: Biểu đồ PieChart cơ cấu thể loại, BarChart top sách mượn nhiều nhất có Tooltip chi tiết; hỗ trợ chuyển đổi Giao diện Tối (Dark Mode).
 * **Chế độ dữ liệu linh hoạt**: Tự động kết nối MySQL (hỗ trợ cả mật khẩu thường lẫn trống), tự động chuyển sang In-Memory Fallback nếu chưa bật CSDL.
 
 ---
@@ -92,7 +96,7 @@ Hệ thống quản lý thư viện được phát triển theo kiến trúc Cli
    * **Tài khoản mặc định**:
      * **Admin**: `admin` / `admin123`
      * **Staff**: `staff` / `staff123`
-   * **Đăng ký tài khoản mới**: Chọn tab **"ĐĂNG KÝ TÀI KHOẢN"** ngay trên giao diện để tạo tài khoản nhân viên thư viện mới. Dữ liệu sẽ được tự động lưu vào MySQL `users` và đồng bộ qua Server TCP.
+   * **Đăng ký tài khoản Độc giả**: Chọn tab **"ĐĂNG KÝ ĐỘC GIẢ"** ngay trên giao diện để tạo tài khoản độc giả mới (`USER`) phục vụ tra cứu và đặt trước sách. Tài khoản Quản trị viên (`ADMIN`) và Thủ thư (`STAFF`) được phân quyền quản lý trong hệ thống nội bộ.
 
 ---
 
@@ -111,7 +115,7 @@ Hệ thống quản lý thư viện được phát triển theo kiến trúc Cli
    ```bash
    mvn javafx:run
    ```
-   Tại màn hình Đăng nhập, nhập **Host** là IP máy Server (ví dụ `192.168.1.15`) và **Port** `8888`.
+   Tại màn hình Đăng nhập, người dùng chỉ cần nhấn nút **"🔍 Dò tìm Server"** — hệ thống sẽ tự động gửi gói tin UDP Broadcast để tìm IP máy chủ Server và tự động điền vào ô IP/Port mà không cần gõ thủ công! (Hoặc có thể nhập IP thủ công ví dụ `192.168.1.15` và Port `8888`).
 
 
   6. Kịch bản demo 2 máy thể hiện rõ kiến trúc Client-Server và tính đồng bộ qua TCP Socket:

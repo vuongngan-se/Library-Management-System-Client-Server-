@@ -75,8 +75,12 @@ public class ClientHandler implements Runnable {
 
                 if ("REGISTER_CHAT_LISTENER".equals(request.getAction())) {
                     String username = request.getData() != null ? request.getData().toString() : "Anonymous";
-                    ChatManager.registerListener(sessionId, username, dos);
-                    ClientSessionManager.updateUser(sessionId, username, "Chat Listener (" + username + ")", "STAFF");
+                    com.library.common.model.ClientSession session = ClientSessionManager.getSession(sessionId);
+                    String role = session != null ? session.getRole() : "STAFF";
+                    if ("ADMIN".equalsIgnoreCase(role) || "STAFF".equalsIgnoreCase(role)) {
+                        ChatManager.registerListener(sessionId, username, dos);
+                        ClientSessionManager.updateUser(sessionId, username, "Chat Listener (" + username + ")", role);
+                    }
                 }
 
                 NetworkUtils.sendJson(dos, response);

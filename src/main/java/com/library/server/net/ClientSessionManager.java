@@ -26,6 +26,10 @@ public class ClientSessionManager {
         sessionHandlerMap.remove(sessionId);
     }
 
+    public static ClientSession getSession(String sessionId) {
+        return sessionInfoMap.get(sessionId);
+    }
+
     public static void updateUser(String sessionId, String username, String fullName, String role) {
         ClientSession session = sessionInfoMap.get(sessionId);
         if (session != null) {

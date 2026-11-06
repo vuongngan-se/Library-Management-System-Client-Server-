@@ -141,21 +141,89 @@
     -fx-background-color: transparent;
 }
 
+/* View & Card Headers */
+.view-title {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #60a5fa;
+}
+
+.card-title {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #f8fafc;
+}
+
 /* Charts */
+.chart {
+    -fx-padding: 8px;
+}
+
 .chart-title {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
     -fx-text-fill: #f8fafc;
 }
 
 .chart-pie-label {
+    -fx-font-size: 11px;
     -fx-fill: #cbd5e1;
+}
+
+.chart-pie-label-line {
+    -fx-stroke: #64748b;
+}
+
+.chart-legend {
+    -fx-background-color: transparent;
+    -fx-padding: 8px;
+}
+
+.chart-legend-item {
+    -fx-text-fill: #cbd5e1;
+    -fx-font-size: 12px;
+}
+
+.chart-legend-item-symbol {
+    -fx-background-radius: 4px;
 }
 
 .axis {
     -fx-tick-label-fill: #94a3b8;
+    -fx-tick-label-font-size: 11px;
 }
 
 .axis-label {
-    -fx-text-fill: #94a3b8;
+    -fx-text-fill: #f8fafc;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+.axis-tick-mark, .axis-minor-tick-mark {
+    -fx-stroke: #475569;
+}
+
+.axis:bottom {
+    -fx-border-color: #334155 transparent transparent transparent;
+}
+
+.axis:left {
+    -fx-border-color: transparent #334155 transparent transparent;
+}
+
+.chart-bar {
+    -fx-bar-fill: #fb923c;
+    -fx-background-radius: 4px 4px 0 0;
+}
+
+.chart-bar:hover {
+    -fx-bar-fill: #f97316;
+}
+
+.quick-scan-input {
+    -fx-border-color: #3b82f6;
+    -fx-background-color: #1e293b;
+    -fx-text-fill: #f8fafc;
 }
 
 /* Chat Overrides in Dark Mode */

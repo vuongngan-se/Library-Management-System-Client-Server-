@@ -47,12 +47,14 @@ public class MainController {
     private final SocketClient socketClient = SocketClient.getInstance();
 
     @FXML private Label lblUserInfo;
+    @FXML private Label lblNetworkStatus;
     @FXML private Button btnThemeToggle;
     private boolean isDarkMode = false;
 
     // Sidebar buttons
     @FXML private Button btnNavDashboard;
     @FXML private Button btnNavBooks;
+    @FXML private Button btnNavMyBorrowings;
     @FXML private Button btnNavReaders;
     @FXML private Button btnNavBorrow;
     @FXML private Button btnNavReservations;
@@ -65,6 +67,7 @@ public class MainController {
     @FXML private StackPane contentArea;
     @FXML private VBox viewDashboard;
     @FXML private VBox viewBooks;
+    @FXML private VBox viewMyBorrowings;
     @FXML private VBox viewReaders;
     @FXML private VBox viewBorrow;
     @FXML private VBox viewReservations;
@@ -72,6 +75,19 @@ public class MainController {
     @FXML private VBox viewNetwork;
     @FXML private VBox viewUsers;
     @FXML private VBox viewChat;
+
+    // My Borrowings Module (Dành riêng cho Độc giả - USER)
+    @FXML private TableView<Borrowing> tblMyBorrowings;
+    @FXML private TableColumn<Borrowing, Integer> colMyBorrowId;
+    @FXML private TableColumn<Borrowing, String> colMyBooks;
+    @FXML private TableColumn<Borrowing, String> colMyBorrowDate;
+    @FXML private TableColumn<Borrowing, String> colMyDueDate;
+    @FXML private TableColumn<Borrowing, String> colMyStatus;
+    @FXML private TableColumn<Borrowing, Double> colMyFine;
+    @FXML private Button btnRenewMyBorrowing;
+
+    // Heartbeat Latency Executor
+    private java.util.concurrent.ScheduledExecutorService heartbeatExecutor;
 
     // Live Chat Module
     @FXML private Label lblChatStatus;
@@ -205,12 +221,15 @@ public class MainController {
     public void initialize() {
         if (chartCategory != null) {
             chartCategory.setAnimated(false);
+            chartCategory.setLabelsVisible(false);
+            chartCategory.setLegendVisible(true);
         }
         if (chartTopBooks != null) {
             chartTopBooks.setAnimated(false);
+            chartTopBooks.setLegendVisible(false);
         }
         if (cbUserRole != null) {
-            cbUserRole.setItems(FXCollections.observableArrayList("ADMIN", "STAFF"));
+            cbUserRole.setItems(FXCollections.observableArrayList("ADMIN", "STAFF", "USER"));
             cbUserRole.getSelectionModel().select("STAFF");
         }
         if (cbUserStatus != null) {
@@ -222,7 +241,13 @@ public class MainController {
     public void initUser(User user) {
         this.currentUser = user;
         lblUserInfo.setText("Xin chào, " + user.getFullName() + " (" + user.getRole() + ")");
-        if (!"ADMIN".equalsIgnoreCase(user.getRole())) {
+
+        boolean isAdmin = "ADMIN".equalsIgnoreCase(user.getRole());
+        boolean isStaff = "STAFF".equalsIgnoreCase(user.getRole());
+        boolean isInternal = isAdmin || isStaff;
+
+        // Phân quyền Quản trị viên (ADMIN)
+        if (!isAdmin) {
             btnNavNetwork.setVisible(false);
             btnNavNetwork.setManaged(false);
             btnNavUsers.setVisible(false);
@@ -232,9 +257,91 @@ public class MainController {
                 btnClearChat.setManaged(false);
             }
         }
+
+        // Phân quyền Nhân viên nội bộ (ADMIN & STAFF)
+        // Nếu là USER thông thường -> Ẩn kênh chat nội bộ và các chức năng quản trị nghiệp vụ độc quyền
+        if (!isInternal) {
+            if (btnNavChat != null) {
+                btnNavChat.setVisible(false);
+                btnNavChat.setManaged(false);
+            }
+            if (btnNavReaders != null) {
+                btnNavReaders.setVisible(false);
+                btnNavReaders.setManaged(false);
+            }
+            if (btnNavBorrow != null) {
+                btnNavBorrow.setVisible(false);
+                btnNavBorrow.setManaged(false);
+            }
+            if (btnNavReservations != null) {
+                btnNavReservations.setVisible(false);
+                btnNavReservations.setManaged(false);
+            }
+            if (btnNavFines != null) {
+                btnNavFines.setVisible(false);
+                btnNavFines.setManaged(false);
+            }
+            if (btnNavMyBorrowings != null) {
+                btnNavMyBorrowings.setVisible(true);
+                btnNavMyBorrowings.setManaged(true);
+            }
+            if (txtChatMessage != null) {
+                txtChatMessage.setDisable(true);
+                txtChatMessage.setPromptText("Kênh chat nội bộ chỉ dành riêng cho Quản trị viên và Thủ thư.");
+            }
+            if (btnSendChat != null) {
+                btnSendChat.setDisable(true);
+            }
+        } else {
+            // Với tài khoản nội bộ (ADMIN & STAFF) -> Ẩn tab riêng của Độc giả
+            if (btnNavMyBorrowings != null) {
+                btnNavMyBorrowings.setVisible(false);
+                btnNavMyBorrowings.setManaged(false);
+            }
+        }
+
         setupTableColumns();
         setupChatListener();
+        startHeartbeatMonitor();
         showDashboard();
+    }
+
+    private void startHeartbeatMonitor() {
+        if (heartbeatExecutor != null && !heartbeatExecutor.isShutdown()) {
+            heartbeatExecutor.shutdownNow();
+        }
+        heartbeatExecutor = java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "Heartbeat-Latency-Monitor");
+            t.setDaemon(true);
+            return t;
+        });
+
+        // Bắt đầu nhịp tim đo RTT sau 1 giây và lặp lại mỗi 4 giây
+        heartbeatExecutor.scheduleWithFixedDelay(() -> {
+            try {
+                long latency = socketClient.measurePing();
+                Platform.runLater(() -> updateLatencyUI(latency));
+            } catch (Exception e) {
+                Platform.runLater(() -> updateLatencyUI(-1));
+            }
+        }, 1, 4, java.util.concurrent.TimeUnit.SECONDS);
+    }
+
+    private void updateLatencyUI(long latency) {
+        if (lblNetworkStatus == null) return;
+        if (latency < 0) {
+            lblNetworkStatus.setText("🔴 Mất kết nối");
+            lblNetworkStatus.setStyle("-fx-text-fill: #e74c3c; -fx-font-weight: bold; -fx-font-size: 12px;");
+        } else if (latency <= 35) {
+            lblNetworkStatus.setText("🟢 " + latency + " ms (Rất tốt)");
+            lblNetworkStatus.setStyle("-fx-text-fill: #2ecc71; -fx-font-weight: bold; -fx-font-size: 12px;");
+        } else if (latency <= 120) {
+            lblNetworkStatus.setText("🟡 " + latency + " ms (Tốt)");
+            lblNetworkStatus.setStyle("-fx-text-fill: #f39c12; -fx-font-weight: bold; -fx-font-size: 12px;");
+        } else {
+            lblNetworkStatus.setText("🟠 " + latency + " ms (Chậm)");
+            lblNetworkStatus.setStyle("-fx-text-fill: #e67e22; -fx-font-weight: bold; -fx-font-size: 12px;");
+        }
     }
 
     private void setupChatListener() {
@@ -246,13 +353,21 @@ public class MainController {
 
     private void onChatMessageReceived(ChatMessage msg) {
         if (msg == null) return;
-        renderChatMessage(msg);
 
         // Check if message is a reactive real-time sync event
         if (msg.getType() != null && msg.getType().startsWith("SYNC_")) {
             handleRealtimeSyncEvent(msg);
             return;
         }
+
+        // Kênh chat nội bộ chỉ hiển thị tin nhắn với Quản trị viên hoặc Thủ thư
+        boolean isInternal = currentUser != null &&
+                ("ADMIN".equalsIgnoreCase(currentUser.getRole()) || "STAFF".equalsIgnoreCase(currentUser.getRole()));
+        if (!isInternal) {
+            return;
+        }
+
+        renderChatMessage(msg);
 
         if (viewChat != null && !viewChat.isVisible()) {
             unreadChatCount++;
@@ -447,11 +562,31 @@ public class MainController {
                 cbUserStatus.getSelectionModel().select(newVal.getStatus());
             }
         });
+
+        // My Borrowings (USER Portal)
+        if (tblMyBorrowings != null) {
+            colMyBorrowId.setCellValueFactory(new PropertyValueFactory<>("borrowingId"));
+            colMyBorrowDate.setCellValueFactory(new PropertyValueFactory<>("borrowDate"));
+            colMyDueDate.setCellValueFactory(new PropertyValueFactory<>("dueDate"));
+            colMyStatus.setCellValueFactory(new PropertyValueFactory<>("status"));
+            colMyFine.setCellValueFactory(new PropertyValueFactory<>("fineAmount"));
+            colMyBooks.setCellValueFactory(cellData -> {
+                Borrowing b = cellData.getValue();
+                if (b != null && b.getDetails() != null && !b.getDetails().isEmpty()) {
+                    String names = b.getDetails().stream()
+                            .map(d -> d.getBookTitle() != null ? d.getBookTitle() : ("Sách #" + d.getBookId()))
+                            .collect(java.util.stream.Collectors.joining(", "));
+                    return new javafx.beans.property.SimpleStringProperty(names);
+                }
+                return new javafx.beans.property.SimpleStringProperty("N/A");
+            });
+        }
     }
 
     private void setActiveNav(Button activeButton, VBox activeView) {
         btnNavDashboard.getStyleClass().remove("sidebar-btn-active");
         btnNavBooks.getStyleClass().remove("sidebar-btn-active");
+        if (btnNavMyBorrowings != null) btnNavMyBorrowings.getStyleClass().remove("sidebar-btn-active");
         btnNavReaders.getStyleClass().remove("sidebar-btn-active");
         btnNavBorrow.getStyleClass().remove("sidebar-btn-active");
         if (btnNavReservations != null) btnNavReservations.getStyleClass().remove("sidebar-btn-active");
@@ -464,6 +599,7 @@ public class MainController {
 
         viewDashboard.setVisible(false);
         viewBooks.setVisible(false);
+        if (viewMyBorrowings != null) viewMyBorrowings.setVisible(false);
         viewReaders.setVisible(false);
         viewBorrow.setVisible(false);
         if (viewReservations != null) viewReservations.setVisible(false);
@@ -477,6 +613,12 @@ public class MainController {
 
     @FXML
     public void showChat() {
+        boolean isInternal = currentUser != null &&
+                ("ADMIN".equalsIgnoreCase(currentUser.getRole()) || "STAFF".equalsIgnoreCase(currentUser.getRole()));
+        if (!isInternal) {
+            showAlert("Từ chối truy cập", "Kênh trò chuyện nội bộ chỉ dành riêng cho Quản trị viên (ADMIN) và Thủ thư (STAFF).");
+            return;
+        }
         setActiveNav(btnNavChat, viewChat);
         unreadChatCount = 0;
         if (btnNavChat != null) {
@@ -499,6 +641,76 @@ public class MainController {
     public void showBooks() {
         setActiveNav(btnNavBooks, viewBooks);
         loadBooksData();
+    }
+
+    @FXML
+    public void showMyBorrowings() {
+        if (btnNavMyBorrowings != null && viewMyBorrowings != null) {
+            setActiveNav(btnNavMyBorrowings, viewMyBorrowings);
+            loadMyBorrowingsData();
+        }
+    }
+
+    @FXML
+    public void loadMyBorrowingsData() {
+        if (currentUser == null) return;
+        try {
+            Map<String, Object> reqData = new HashMap<>();
+            reqData.put("userId", currentUser.getUserId());
+            reqData.put("username", currentUser.getUsername());
+            reqData.put("fullName", currentUser.getFullName());
+
+            Response res = socketClient.sendRequest(new Request("GET_MY_BORROWINGS", reqData));
+            if ("SUCCESS".equals(res.getStatus())) {
+                List<Borrowing> list = socketClient.convertData(res.getData(), new TypeReference<List<Borrowing>>() {});
+                if (tblMyBorrowings != null) {
+                    tblMyBorrowings.setItems(FXCollections.observableArrayList(list));
+                }
+            } else {
+                showAlert("Lỗi tải phiếu mượn", res.getMessage());
+            }
+        } catch (IOException e) {
+            showAlert("Lỗi kết nối", e.getMessage());
+        }
+    }
+
+    @FXML
+    public void handleRenewMyBorrowing() {
+        if (tblMyBorrowings == null) return;
+        Borrowing selected = tblMyBorrowings.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            showAlert("Thông báo", "Vui lòng chọn một phiếu mượn trong danh sách để gia hạn!");
+            return;
+        }
+
+        if (!"BORROWED".equalsIgnoreCase(selected.getStatus())) {
+            showAlert("Không thể gia hạn", "Chỉ có thể gia hạn phiếu mượn đang trong trạng thái 'BORROWED' (Đang mượn).");
+            return;
+        }
+
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Xác nhận gia hạn sách");
+        confirm.setHeaderText("Gia hạn thêm 7 ngày cho Phiếu mượn #" + selected.getBorrowingId() + "?");
+        confirm.setContentText("Hạn trả hiện tại: " + selected.getDueDate() + "\nHệ thống sẽ tự động cộng thêm 7 ngày vào thời hạn trả.");
+
+        Optional<ButtonType> result = confirm.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            try {
+                Map<String, Object> reqData = new HashMap<>();
+                reqData.put("borrowingId", selected.getBorrowingId());
+                reqData.put("extraDays", 7);
+
+                Response res = socketClient.sendRequest(new Request("RENEW_BORROWING", reqData));
+                if ("SUCCESS".equals(res.getStatus())) {
+                    showAlert("Thành công", res.getMessage());
+                    loadMyBorrowingsData();
+                } else {
+                    showAlert("Lỗi gia hạn", res.getMessage());
+                }
+            } catch (IOException e) {
+                showAlert("Lỗi truyền tin Socket", e.getMessage());
+            }
+        }
     }
 
     @FXML
@@ -804,6 +1016,18 @@ public class MainController {
                         pieData.add(new PieChart.Data("Khác (" + otherCount + ")", otherCount));
                     }
                     chartCategory.setData(pieData);
+                    chartCategory.setLabelsVisible(false);
+                    for (PieChart.Data data : pieData) {
+                        String tipText = data.getName() + ": " + (int) data.getPieValue() + " cuốn";
+                        if (data.getNode() != null) {
+                            Tooltip.install(data.getNode(), new Tooltip(tipText));
+                        }
+                        data.nodeProperty().addListener((obs, oldN, newN) -> {
+                            if (newN != null) {
+                                Tooltip.install(newN, new Tooltip(tipText));
+                            }
+                        });
+                    }
                 }
 
                 // Load Top Borrowed Books BarChart
@@ -815,11 +1039,24 @@ public class MainController {
                     series.setName("Lượt mượn");
                     for (Map.Entry<?, ?> entry : topBooks.entrySet()) {
                         String title = String.valueOf(entry.getKey());
-                        String shortTitle = title.length() > 16 ? title.substring(0, 14) + "..." : title;
+                        String shortTitle = title.length() > 14 ? title.substring(0, 12) + "..." : title;
                         int val = ((Number) entry.getValue()).intValue();
-                        series.getData().add(new XYChart.Data<>(shortTitle, val));
+                        XYChart.Data<String, Number> item = new XYChart.Data<>(shortTitle, val);
+                        series.getData().add(item);
                     }
                     chartTopBooks.getData().add(series);
+                    for (XYChart.Data<String, Number> item : series.getData()) {
+                        String fullTitle = item.getXValue();
+                        String tipText = fullTitle + ": " + item.getYValue() + " lượt mượn";
+                        if (item.getNode() != null) {
+                            Tooltip.install(item.getNode(), new Tooltip(tipText));
+                        }
+                        item.nodeProperty().addListener((obs, oldN, newN) -> {
+                            if (newN != null) {
+                                Tooltip.install(newN, new Tooltip(tipText));
+                            }
+                        });
+                    }
                 }
             }
 
@@ -1509,17 +1746,22 @@ public class MainController {
     public void handleToggleTheme() {
         if (btnThemeToggle == null || btnThemeToggle.getScene() == null) return;
         Scene scene = btnThemeToggle.getScene();
+        Parent root = scene.getRoot();
+        String lightCss = getClass().getResource("/css/style.css").toExternalForm();
         String darkCss = getClass().getResource("/css/style-dark.css").toExternalForm();
 
         isDarkMode = !isDarkMode;
+        root.getStylesheets().clear();
+        scene.getStylesheets().clear();
+
         if (isDarkMode) {
-            if (!scene.getStylesheets().contains(darkCss)) {
-                scene.getStylesheets().add(darkCss);
-            }
+            root.getStylesheets().add(darkCss);
+            scene.getStylesheets().add(darkCss);
             btnThemeToggle.setText("☀️ Giao diện Sáng");
             showLiveToast("🌙 Đã chuyển sang chế độ Giao diện Tối");
         } else {
-            scene.getStylesheets().remove(darkCss);
+            root.getStylesheets().add(lightCss);
+            scene.getStylesheets().add(lightCss);
             btnThemeToggle.setText("🌙 Giao diện Tối");
             showLiveToast("☀️ Đã chuyển sang chế độ Giao diện Sáng");
         }
@@ -1527,6 +1769,9 @@ public class MainController {
 
     @FXML
     public void handleLogout() {
+        if (heartbeatExecutor != null && !heartbeatExecutor.isShutdown()) {
+            heartbeatExecutor.shutdownNow();
+        }
         ChatClientListener.getInstance().stop();
         socketClient.disconnect();
         try {
@@ -1547,6 +1792,13 @@ public class MainController {
 
     @FXML
     public void handleSendChat() {
+        boolean isInternal = currentUser != null &&
+                ("ADMIN".equalsIgnoreCase(currentUser.getRole()) || "STAFF".equalsIgnoreCase(currentUser.getRole()));
+        if (!isInternal) {
+            showAlert("Từ chối truy cập", "Kênh chat nội bộ chỉ dành riêng cho Quản trị viên (ADMIN) và Thủ thư (STAFF).");
+            return;
+        }
+
         if (txtChatMessage == null) return;
         String text = txtChatMessage.getText().trim();
         if (text.isEmpty()) return;
@@ -1598,6 +1850,9 @@ public class MainController {
     }
 
     private void loadChatHistory() {
+        boolean isInternal = currentUser != null &&
+                ("ADMIN".equalsIgnoreCase(currentUser.getRole()) || "STAFF".equalsIgnoreCase(currentUser.getRole()));
+        if (!isInternal) return;
         try {
             Response resp = socketClient.sendRequest(new Request("GET_CHAT_HISTORY", null));
             if ("SUCCESS".equals(resp.getStatus()) && resp.getData() != null) {

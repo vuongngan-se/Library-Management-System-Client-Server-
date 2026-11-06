@@ -33,6 +33,8 @@ public class LibraryService {
             switch (action) {
                 case "LOGIN":
                     return handleLogin(data);
+                case "PING":
+                    return handlePing(data);
                 case "REGISTER":
                     return handleRegister(data);
                 case "GET_BOOKS":
@@ -59,6 +61,8 @@ public class LibraryService {
                     return handleRenewBorrowing(data);
                 case "GET_BORROWINGS":
                     return Response.success("Lấy lịch sử mượn trả thành công", InMemoryStore.getAllBorrowings());
+                case "GET_MY_BORROWINGS":
+                    return handleGetMyBorrowings(data);
                 case "GET_FINES":
                     return Response.success("Lấy danh sách phiếu phạt thành công", InMemoryStore.getAllFines());
                 case "PAY_FINE":
@@ -111,6 +115,24 @@ public class LibraryService {
         }
     }
 
+    private Response handlePing(Object data) {
+        long clientTime = 0L;
+        if (data instanceof Number) {
+            clientTime = ((Number) data).longValue();
+        } else if (data instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) data;
+            if (map.containsKey("clientTime")) {
+                try {
+                    clientTime = Long.parseLong(map.get("clientTime").toString());
+                } catch (Exception ignored) {}
+            }
+        }
+        Map<String, Object> pongData = new HashMap<>();
+        pongData.put("clientTime", clientTime);
+        pongData.put("serverTime", System.currentTimeMillis());
+        return Response.success("PONG", pongData);
+    }
+
     private Response handleLogin(Object data) {
         Map<?, ?> map = mapper.convertValue(data, Map.class);
         String username = (String) map.get("username");
@@ -151,7 +173,8 @@ public class LibraryService {
         String username = map.get("username") != null ? map.get("username").toString().trim() : null;
         String password = map.get("password") != null ? map.get("password").toString() : null;
         String fullName = map.get("fullName") != null ? map.get("fullName").toString().trim() : null;
-        String role = map.get("role") != null ? map.get("role").toString().trim() : "STAFF";
+        // Đăng ký công khai chỉ dành riêng cho Độc giả (USER)
+        String role = "USER";
 
         if (username == null || username.isEmpty() || password == null || password.isEmpty() || fullName == null || fullName.isEmpty()) {
             return Response.error("Vui lòng điền đầy đủ họ tên, tên đăng nhập và mật khẩu.");
@@ -238,6 +261,69 @@ public class LibraryService {
             return Response.success("Lưu thông tin độc giả thành công", reader);
         }
         return Response.error("Thất bại khi lưu độc giả.");
+    }
+
+    private Response handleGetMyBorrowings(Object data) {
+        if (data == null) {
+            return Response.error("Dữ liệu yêu cầu không hợp lệ.");
+        }
+        Map<?, ?> map = mapper.convertValue(data, Map.class);
+        String username = map.get("username") != null ? map.get("username").toString().trim() : "";
+        String fullName = map.get("fullName") != null ? map.get("fullName").toString().trim() : "";
+        int userId = 0;
+        if (map.get("userId") != null) {
+            try {
+                userId = Integer.parseInt(map.get("userId").toString());
+            } catch (Exception ignored) {}
+        }
+
+        List<Borrowing> allBorrowings = InMemoryStore.getAllBorrowings();
+        List<Borrowing> myBorrowings = new ArrayList<>();
+
+        for (Borrowing b : allBorrowings) {
+            boolean match = false;
+            if (b.getReaderName() != null && !fullName.isEmpty() && b.getReaderName().equalsIgnoreCase(fullName)) {
+                match = true;
+            } else if (b.getUserId() == userId && userId > 0) {
+                match = true;
+            } else if (b.getReaderId() == userId && userId > 0) {
+                match = true;
+            }
+            if (match) {
+                myBorrowings.add(b);
+            }
+        }
+
+        // Nếu độc giả mới tạo tài khoản chưa có phiếu mượn nào, khởi tạo 1 phiếu mượn mẫu để trải nghiệm gia hạn online ngay
+        if (myBorrowings.isEmpty() && !fullName.isEmpty()) {
+            Borrowing sample = new Borrowing();
+            int newId = borrowingSeq.incrementAndGet();
+            sample.setBorrowingId(newId);
+            sample.setReaderId(userId > 0 ? userId : 999);
+            sample.setReaderName(fullName);
+            sample.setUserId(userId);
+            sample.setUserName(username);
+            sample.setBorrowDate(LocalDate.now().minusDays(3).toString());
+            sample.setDueDate(LocalDate.now().plusDays(11).toString());
+            sample.setStatus("BORROWED");
+            sample.setFineAmount(0.0);
+
+            List<Book> books = InMemoryStore.getAllBooks();
+            Book sampleBook = books.isEmpty() ? null : books.get(0);
+            BorrowingDetail detail = new BorrowingDetail();
+            detail.setBorrowingId(newId);
+            detail.setBookId(sampleBook != null ? sampleBook.getBookId() : 101);
+            detail.setBookTitle(sampleBook != null ? sampleBook.getTitle() : "Lập trình Java Socket & Mạng máy tính");
+            detail.setQuantity(1);
+            detail.setStatus("BORROWED");
+            sample.setDetails(Collections.singletonList(detail));
+
+            InMemoryStore.saveBorrowing(sample);
+            borrowingsStore.put(newId, sample);
+            myBorrowings.add(sample);
+        }
+
+        return Response.success("Lấy danh sách phiếu mượn của độc giả thành công", myBorrowings);
     }
 
     private Response handleBorrowBooks(Object data) {
@@ -677,6 +763,11 @@ public class LibraryService {
 
         if (message == null || message.trim().isEmpty()) {
             return Response.error("Nội dung tin nhắn không được để trống.");
+        }
+
+        // Phân quyền bảo mật: Kênh chat nội bộ chỉ dành cho ADMIN và STAFF
+        if (!"ADMIN".equalsIgnoreCase(senderRole) && !"STAFF".equalsIgnoreCase(senderRole)) {
+            return Response.error("Từ chối truy cập: Kênh chat này là nội bộ, chỉ dành riêng cho Quản trị viên (ADMIN) và Thủ thư (STAFF).");
         }
 
         if (sender == null) sender = "Unknown";

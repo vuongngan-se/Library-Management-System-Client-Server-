@@ -1,14 +1,18 @@
 package com.library.client.controller;
 
+import com.library.client.net.DiscoveryClient;
 import com.library.client.net.SocketClient;
 import com.library.common.model.User;
 import com.library.common.protocol.Request;
 import com.library.common.protocol.Response;
+import javafx.application.Platform;
+import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
@@ -23,6 +27,8 @@ public class LoginController {
 
     @FXML private TextField txtHost;
     @FXML private TextField txtPort;
+    @FXML private Button btnDiscover;
+    @FXML private Label lblDiscoveryStatus;
 
     // Login Form Elements
     @FXML private VBox vboxLogin;
@@ -42,6 +48,40 @@ public class LoginController {
 
     // Feedback message
     @FXML private Label lblError;
+
+    @FXML
+    public void handleDiscoverServer() {
+        if (btnDiscover != null) {
+            btnDiscover.setDisable(true);
+            btnDiscover.setText("⏳ Đang dò...");
+        }
+        if (lblDiscoveryStatus != null) {
+            lblDiscoveryStatus.setStyle("-fx-font-size: 11px; -fx-text-fill: #2980b9;");
+            lblDiscoveryStatus.setText("Đang phát gói tin UDP Broadcast tìm kiếm máy chủ...");
+        }
+
+        DiscoveryClient.discoverServerAsync(2500).thenAccept(server -> {
+            Platform.runLater(() -> {
+                if (btnDiscover != null) {
+                    btnDiscover.setDisable(false);
+                    btnDiscover.setText("🔍 Dò tìm Server");
+                }
+                if (server != null) {
+                    txtHost.setText(server.getHost());
+                    txtPort.setText(String.valueOf(server.getPort()));
+                    if (lblDiscoveryStatus != null) {
+                        lblDiscoveryStatus.setStyle("-fx-font-size: 11px; -fx-text-fill: #27ae60; -fx-font-weight: bold;");
+                        lblDiscoveryStatus.setText("✓ Đã tìm thấy: " + server.getServerName() + " (" + server.getHost() + ":" + server.getPort() + ")");
+                    }
+                } else {
+                    if (lblDiscoveryStatus != null) {
+                        lblDiscoveryStatus.setStyle("-fx-font-size: 11px; -fx-text-fill: #e67e22;");
+                        lblDiscoveryStatus.setText("⚠ Không tìm thấy Server tự động. Vui lòng nhập IP thủ công (ví dụ: localhost).");
+                    }
+                }
+            });
+        });
+    }
 
     @FXML
     public void showLoginForm() {
@@ -157,7 +197,7 @@ public class LoginController {
             regData.put("fullName", fullName);
             regData.put("username", username);
             regData.put("password", password);
-            regData.put("role", "STAFF");
+            regData.put("role", "USER"); // Đăng ký bên ngoài dành riêng cho Độc giả
 
             Request request = new Request("REGISTER", regData);
             Response response = client.sendRequest(request);
@@ -171,7 +211,7 @@ public class LoginController {
                 txtRegConfirmPassword.clear();
 
                 showLoginForm();
-                showSuccess("Đăng ký thành công! Hãy nhập mật khẩu để đăng nhập.");
+                showSuccess("Đăng ký tài khoản Độc giả thành công! Hãy nhập mật khẩu để đăng nhập.");
             } else {
                 showError(response.getMessage());
             }

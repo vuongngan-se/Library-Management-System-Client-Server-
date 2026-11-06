@@ -13,6 +13,18 @@
             <children>
                 <Label styleClass="nav-title" text="📚 PHẦN MỀM QUẢN LÝ THƯ VIỆN CLIENT-SERVER" />
                 <Region HBox.hgrow="ALWAYS" />
+                <HBox alignment="CENTER" style="-fx-background-color: rgba(255,255,255,0.12); -fx-background-radius: 20; -fx-padding: 4 12;">
+                    <children>
+                        <Label fx:id="lblNetworkStatus" style="-fx-text-fill: #2ecc71; -fx-font-weight: bold; -fx-font-size: 12px;" text="🟢 -- ms">
+                            <tooltip>
+                                <Tooltip text="Độ trễ khứ hồi TCP Socket (RTT) tới Máy chủ" />
+                            </tooltip>
+                        </Label>
+                    </children>
+                    <HBox.margin>
+                        <Insets right="12.0" />
+                    </HBox.margin>
+                </HBox>
                 <Label fx:id="lblUserInfo" text="Xin chào, User (Chức vụ)" textFill="WHITE">
                     <font>
                         <Font name="System Bold" size="14.0" />
@@ -37,6 +49,7 @@
             <children>
                 <Button fx:id="btnNavDashboard" maxWidth="1.7976931348623157E308" onAction="#showDashboard" styleClass="sidebar-btn, sidebar-btn-active" text="📊 Tổng quan &amp; Báo cáo" />
                 <Button fx:id="btnNavBooks" maxWidth="1.7976931348623157E308" onAction="#showBooks" styleClass="sidebar-btn" text="📖 Quản lý Sách" />
+                <Button fx:id="btnNavMyBorrowings" maxWidth="1.7976931348623157E308" onAction="#showMyBorrowings" styleClass="sidebar-btn" text="📚 Sách Của Tôi" />
                 <Button fx:id="btnNavReaders" maxWidth="1.7976931348623157E308" onAction="#showReaders" styleClass="sidebar-btn" text="🎴 Quản lý Độc giả" />
                 <Button fx:id="btnNavBorrow" maxWidth="1.7976931348623157E308" onAction="#showBorrow" styleClass="sidebar-btn" text="🔄 Mượn &amp; Trả sách" />
                 <Button fx:id="btnNavReservations" maxWidth="1.7976931348623157E308" onAction="#showReservations" styleClass="sidebar-btn" text="📌 Đặt trước Sách" />
@@ -54,11 +67,7 @@
             <!-- Dashboard View -->
             <VBox fx:id="viewDashboard" spacing="15.0">
                 <children>
-                    <Label text="Bảng điều khiển &amp; Thống kê" textFill="#2c3e50">
-                        <font>
-                            <Font name="System Bold" size="20.0" />
-                        </font>
-                    </Label>
+                    <Label styleClass="view-title" text="Bảng điều khiển &amp; Thống kê" />
                     <ScrollPane fitToWidth="true" styleClass="content-scrollpane" VBox.vgrow="ALWAYS">
                         <content>
                             <VBox spacing="20.0">
@@ -110,23 +119,17 @@
                                         <children>
                                             <VBox prefHeight="330.0" styleClass="card" GridPane.columnIndex="0">
                                                 <children>
-                                                    <Label text="📊 Cơ cấu Sách theo Thể loại" textFill="#2c3e50">
-                                                        <font>
-                                                            <Font name="System Bold" size="14.0" />
-                                                        </font>
+                                                    <Label styleClass="card-title" text="📊 Cơ cấu Sách theo Thể loại">
                                                         <VBox.margin>
                                                             <Insets bottom="10.0" />
                                                         </VBox.margin>
                                                     </Label>
-                                                    <PieChart fx:id="chartCategory" animated="false" legendSide="BOTTOM" VBox.vgrow="ALWAYS" />
+                                                    <PieChart fx:id="chartCategory" animated="false" labelsVisible="false" legendSide="BOTTOM" VBox.vgrow="ALWAYS" />
                                                 </children>
                                             </VBox>
                                             <VBox prefHeight="330.0" styleClass="card" GridPane.columnIndex="1">
                                                 <children>
-                                                    <Label text="📈 Top Sách được Mượn Nhiều Nhất" textFill="#2c3e50">
-                                                        <font>
-                                                            <Font name="System Bold" size="14.0" />
-                                                        </font>
+                                                    <Label styleClass="card-title" text="📈 Top Sách được Mượn Nhiều Nhất">
                                                         <VBox.margin>
                                                             <Insets bottom="10.0" />
                                                         </VBox.margin>
@@ -136,7 +139,7 @@
                                                             <CategoryAxis fx:id="axisBookTitle" label="Tên sách" side="BOTTOM" />
                                                         </xAxis>
                                                         <yAxis>
-                                                            <NumberAxis fx:id="axisBorrowCount" label="Số lượt mượn" side="LEFT" />
+                                                            <NumberAxis fx:id="axisBorrowCount" label="Số lượt mượn" minorTickCount="0" side="LEFT" />
                                                         </yAxis>
                                                     </BarChart>
                                                 </children>
@@ -147,10 +150,7 @@
                                     <!-- Recent Activities Table -->
                                     <VBox prefHeight="260.0" styleClass="card">
                                         <children>
-                                            <Label text="Hoạt động gần đây trong hệ thống" textFill="#2c3e50">
-                                                <font>
-                                                    <Font name="System Bold" size="15.0" />
-                                                </font>
+                                            <Label styleClass="card-title" text="Hoạt động gần đây trong hệ thống">
                                                 <VBox.margin>
                                                     <Insets bottom="10.0" />
                                                 </VBox.margin>
@@ -178,11 +178,7 @@
                 <children>
                     <HBox alignment="CENTER_LEFT" spacing="15.0">
                         <children>
-                            <Label text="Quản lý thông tin Sách" textFill="#2c3e50">
-                                <font>
-                                    <Font name="System Bold" size="20.0" />
-                                </font>
-                            </Label>
+                            <Label styleClass="view-title" text="Quản lý thông tin Sách" />
                             <Region HBox.hgrow="ALWAYS" />
                             <TextField fx:id="txtSearchBook" prefWidth="250.0" promptText="Tìm kiếm sách theo tên, tác giả..." />
                             <Button onAction="#handleSearchBook" styleClass="btn-primary" text="Tìm kiếm" />
@@ -205,11 +201,7 @@
                             <!-- Form View -->
                             <VBox prefWidth="300.0" spacing="10.0" styleClass="card">
                                 <children>
-                                    <Label text="Thông tin Sách" textFill="#2c3e50">
-                                        <font>
-                                            <Font name="System Bold" size="14.0" />
-                                        </font>
-                                    </Label>
+                                    <Label styleClass="card-title" text="Thông tin Sách" />
                                     <Label text="Tên sách:" />
                                     <TextField fx:id="txtBookTitle" />
                                     <Label text="Tác giả:" />
@@ -244,11 +236,7 @@
                 <children>
                     <HBox alignment="CENTER_LEFT" spacing="15.0">
                         <children>
-                            <Label text="Quản lý Độc giả" textFill="#2c3e50">
-                                <font>
-                                    <Font name="System Bold" size="20.0" />
-                                </font>
-                            </Label>
+                            <Label styleClass="view-title" text="Quản lý Độc giả" />
                         </children>
                     </HBox>
                     <HBox spacing="20.0" VBox.vgrow="ALWAYS">
@@ -264,11 +252,7 @@
                             </TableView>
                             <VBox prefWidth="300.0" spacing="10.0" styleClass="card">
                                 <children>
-                                    <Label text="Thông tin Độc giả" textFill="#2c3e50">
-                                        <font>
-                                            <Font name="System Bold" size="14.0" />
-                                        </font>
-                                    </Label>
+                                    <Label styleClass="card-title" text="Thông tin Độc giả" />
                                     <Label text="Họ và tên:" />
                                     <TextField fx:id="txtReaderName" />
                                     <Label text="Số điện thoại:" />
@@ -295,22 +279,14 @@
             <!-- Borrow View -->
             <VBox fx:id="viewBorrow" spacing="15.0" visible="false">
                 <children>
-                    <Label text="Quản lý Mượn &amp; Trả Sách" textFill="#2c3e50">
-                        <font>
-                            <Font name="System Bold" size="20.0" />
-                        </font>
-                    </Label>
+                    <Label styleClass="view-title" text="Quản lý Mượn &amp; Trả Sách" />
                     <HBox spacing="20.0" VBox.vgrow="ALWAYS">
                         <!-- Borrow Creation Panel -->
                         <VBox prefWidth="400.0" spacing="10.0" styleClass="card">
                             <children>
-                                <Label text="Lập phiếu mượn sách mới" textFill="#2c3e50">
-                                    <font>
-                                        <Font name="System Bold" size="15.0" />
-                                    </font>
-                                </Label>
+                                <Label styleClass="card-title" text="Lập phiếu mượn sách mới" />
                                 <Label text="⚡ Quét mã QR / Nhập nhanh:" />
-                                <TextField fx:id="txtQuickScan" onAction="#handleQuickScan" promptText="Quét/dán mã QR hoặc nhập ISBN/Mã thẻ rồi bấm Enter" style="-fx-border-color: #3b82f6; -fx-background-color: #f0f7ff;" />
+                                <TextField fx:id="txtQuickScan" onAction="#handleQuickScan" promptText="Quét/dán mã QR hoặc nhập ISBN/Mã thẻ rồi bấm Enter" styleClass="quick-scan-input" />
                                 <Label text="Mã độc giả:" />
                                 <TextField fx:id="txtBorrowReaderId" promptText="Nhập ID độc giả" />
                                 <Label text="Mã sách mượn (phân cách bằng dấu phẩy):" />
@@ -330,7 +306,7 @@
                             <children>
                                 <HBox alignment="CENTER_LEFT" spacing="10.0">
                                     <children>
-                                        <Label text="Danh sách phiếu mượn" textFill="#2c3e50">
+                                        <Label styleClass="card-title" text="Danh sách phiếu mượn">
                                             <font>
                                                 <Font name="System Bold" size="15.0" />
                                             </font>
@@ -362,11 +338,7 @@
                 <children>
                     <HBox alignment="CENTER_LEFT" spacing="15.0">
                         <children>
-                            <Label text="Quản lý Tiền phạt &amp; Vi phạm" textFill="#2c3e50">
-                                <font>
-                                    <Font name="System Bold" size="20.0" />
-                                </font>
-                            </Label>
+                            <Label styleClass="view-title" text="Quản lý Tiền phạt &amp; Vi phạm" />
                             <Region HBox.hgrow="ALWAYS" />
                             <Button onAction="#handleExportFinesCsv" styleClass="btn-secondary" text="📥 Xuất CSV" />
                             <Button onAction="#handleRefreshFines" styleClass="btn-secondary" text="🔄 Làm mới" />
@@ -392,11 +364,7 @@
                 <children>
                     <HBox alignment="CENTER_LEFT" spacing="15.0">
                         <children>
-                            <Label text="🌐 Giám sát Kết nối Mạng TCP Socket thời gian thực" textFill="#2c3e50">
-                                <font>
-                                    <Font name="System Bold" size="20.0" />
-                                </font>
-                            </Label>
+                            <Label styleClass="view-title" text="🌐 Giám sát Kết nối Mạng TCP Socket thời gian thực" />
                             <Region HBox.hgrow="ALWAYS" />
                             <Button onAction="#handleRefreshSessions" styleClass="btn-secondary" text="🔄 Làm mới" />
                             <Button onAction="#handleKickSelectedSession" styleClass="btn-danger" text="⛔ Ngắt kết nối Client" />
@@ -438,10 +406,7 @@
                     <!-- Sessions Table -->
                     <VBox styleClass="card" VBox.vgrow="ALWAYS">
                         <children>
-                            <Label text="Danh sách các phiên làm việc (Active TCP Sockets)" textFill="#2c3e50">
-                                <font>
-                                    <Font name="System Bold" size="14.0" />
-                                </font>
+                            <Label styleClass="card-title" text="Danh sách các phiên làm việc (Active TCP Sockets)">
                                 <VBox.margin>
                                     <Insets bottom="10.0" />
                                 </VBox.margin>
@@ -469,11 +434,7 @@
                 <children>
                     <HBox alignment="CENTER_LEFT" spacing="15.0">
                         <children>
-                            <Label text="👥 Quản lý Tài khoản &amp; Phân quyền Nhân viên" textFill="#2c3e50">
-                                <font>
-                                    <Font name="System Bold" size="20.0" />
-                                </font>
-                            </Label>
+                            <Label styleClass="view-title" text="👥 Quản lý Tài khoản &amp; Phân quyền Nhân viên" />
                             <Region HBox.hgrow="ALWAYS" />
                             <TextField fx:id="txtSearchUser" prefWidth="250.0" promptText="Tìm theo username, họ tên..." />
                             <Button onAction="#handleSearchUser" styleClass="btn-primary" text="Tìm kiếm" />
@@ -496,11 +457,7 @@
                             <!-- Form View -->
                             <VBox prefWidth="320.0" spacing="10.0" styleClass="card">
                                 <children>
-                                    <Label text="Thông tin Tài khoản" textFill="#2c3e50">
-                                        <font>
-                                            <Font name="System Bold" size="14.0" />
-                                        </font>
-                                    </Label>
+                                    <Label styleClass="card-title" text="Thông tin Tài khoản" />
                                     <Label text="Tên đăng nhập:" />
                                     <TextField fx:id="txtUserUsername" promptText="Ví dụ: thuthu_linh" />
                                     <Label text="Mật khẩu:" />
@@ -532,11 +489,7 @@
                 <children>
                     <HBox alignment="CENTER_LEFT" spacing="10.0">
                         <children>
-                            <Label text="💬 Kênh Trao đổi Nội bộ Thủ thư &amp; Quản trị" textFill="#2c3e50">
-                                <font>
-                                    <Font name="System Bold" size="20.0" />
-                                </font>
-                            </Label>
+                            <Label styleClass="view-title" text="💬 Kênh Trao đổi Nội bộ Thủ thư &amp; Quản trị" />
                             <Region HBox.hgrow="ALWAYS" />
                             <Label fx:id="lblChatStatus" style="-fx-background-color: #e8f8f5; -fx-text-fill: #1abc9c; -fx-padding: 4 10; -fx-background-radius: 12; -fx-font-weight: bold;" text="🟢 Đang kết nối trực tiếp" />
                             <Button fx:id="btnClearChat" onAction="#handleClearChat" styleClass="btn-danger" text="🗑 Xóa lịch sử" />
@@ -569,11 +522,7 @@
                 <children>
                     <HBox alignment="CENTER_LEFT" spacing="10.0">
                         <children>
-                            <Label text="📌 Quản lý Đặt trước Sách (Book Reservations)" textFill="#2c3e50">
-                                <font>
-                                    <Font name="System Bold" size="20.0" />
-                                </font>
-                            </Label>
+                            <Label styleClass="view-title" text="📌 Quản lý Đặt trước Sách (Book Reservations)" />
                             <Region HBox.hgrow="ALWAYS" />
                             <Button onAction="#handleRefreshReservations" styleClass="btn-secondary" text="🔄 Làm mới" />
                             <Button onAction="#handleFulfillSelectedReservation" styleClass="btn-success" text="✅ Hoàn tất nhận sách" />
@@ -595,11 +544,7 @@
                         <!-- Form to create new reservation -->
                         <VBox prefWidth="320.0" spacing="10.0" styleClass="card">
                             <children>
-                                <Label text="Lập phiếu Đặt trước mới" textFill="#2c3e50">
-                                    <font>
-                                        <Font name="System Bold" size="14.0" />
-                                    </font>
-                                </Label>
+                                <Label styleClass="card-title" text="Lập phiếu Đặt trước mới" />
                                 <Label text="Mã độc giả:" />
                                 <TextField fx:id="txtResReaderId" promptText="Nhập ID độc giả (VD: 1)" />
                                 <Label text="Mã sách đặt trước:" />
@@ -610,6 +555,36 @@
                                 <Button maxWidth="Infinity" onAction="#handleCreateNewReservation" styleClass="btn-primary" text="📌 Xác nhận Đặt trước" />
                             </children>
                         </VBox>
+                    </HBox>
+                </children>
+            </VBox>
+
+            <!-- My Borrowings View (Dành riêng cho Độc giả - USER Portal) -->
+            <VBox fx:id="viewMyBorrowings" spacing="15.0" visible="false">
+                <children>
+                    <HBox alignment="CENTER_LEFT" spacing="12.0">
+                        <children>
+                            <Label styleClass="view-title" text="📖 Sách Của Tôi &amp; Gia Hạn Trực Tuyến" />
+                            <Region HBox.hgrow="ALWAYS" />
+                            <Button onAction="#loadMyBorrowingsData" styleClass="btn-secondary" text="⚡ Tải lại danh sách" />
+                            <Button fx:id="btnRenewMyBorrowing" onAction="#handleRenewMyBorrowing" styleClass="btn-success" text="🔄 Gia hạn thêm 7 ngày" />
+                        </children>
+                    </HBox>
+                    <TableView fx:id="tblMyBorrowings" VBox.vgrow="ALWAYS">
+                        <columns>
+                            <TableColumn fx:id="colMyBorrowId" prefWidth="75.0" text="Mã phiếu" />
+                            <TableColumn fx:id="colMyBooks" prefWidth="320.0" text="Tên sách mượn" />
+                            <TableColumn fx:id="colMyBorrowDate" prefWidth="120.0" text="Ngày mượn" />
+                            <TableColumn fx:id="colMyDueDate" prefWidth="120.0" text="Hạn trả" />
+                            <TableColumn fx:id="colMyStatus" prefWidth="130.0" text="Trạng thái" />
+                            <TableColumn fx:id="colMyFine" prefWidth="130.0" text="Tiền phạt (VNĐ)" />
+                        </columns>
+                    </TableView>
+                    <HBox alignment="CENTER_LEFT" spacing="10.0" style="-fx-background-color: rgba(52, 152, 219, 0.1); -fx-padding: 10 15; -fx-background-radius: 6;">
+                        <children>
+                            <Label style="-fx-font-size: 13px; -fx-text-fill: #2980b9; -fx-font-weight: bold;" text="💡 Mẹo Độc giả:" />
+                            <Label style="-fx-font-size: 12px; -fx-text-fill: #34495e;" text="Chọn một phiếu mượn và nhấn 'Gia hạn thêm 7 ngày' để kéo dài thời gian mượn trực tiếp mà không cần đến quầy thư viện." />
+                        </children>
                     </HBox>
                 </children>
             </VBox>

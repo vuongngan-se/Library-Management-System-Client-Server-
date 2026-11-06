@@ -250,6 +250,19 @@
     -fx-underline: true;
 }
 
+/* View & Card Headers */
+.view-title {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #1e3c72;
+}
+
+.card-title {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #2c3e50;
+}
+
 /* Dashboard Scroll & Charts */
 .content-scrollpane {
     -fx-background-color: transparent;
@@ -258,18 +271,61 @@
 .content-scrollpane > .viewport {
     -fx-background-color: transparent;
 }
+.chart {
+    -fx-padding: 8px;
+}
 .chart-title {
     -fx-font-size: 14px;
     -fx-font-weight: bold;
-    -fx-text-fill: #2c3e50;
+    -fx-text-fill: #1e3c72;
 }
 .chart-pie-label {
     -fx-font-size: 11px;
     -fx-fill: #2c3e50;
 }
+.chart-pie-label-line {
+    -fx-stroke: #94a3b8;
+}
 .chart-legend {
     -fx-background-color: transparent;
-    -fx-padding: 5px;
+    -fx-padding: 8px;
+}
+.chart-legend-item {
+    -fx-text-fill: #2c3e50;
+    -fx-font-size: 12px;
+}
+.chart-legend-item-symbol {
+    -fx-background-radius: 4px;
+}
+.axis {
+    -fx-tick-label-fill: #334155;
+    -fx-tick-label-font-size: 11px;
+}
+.axis-label {
+    -fx-text-fill: #1e293b;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+.axis-tick-mark, .axis-minor-tick-mark {
+    -fx-stroke: #94a3b8;
+}
+.axis:bottom {
+    -fx-border-color: #cbd5e1 transparent transparent transparent;
+}
+.axis:left {
+    -fx-border-color: transparent #cbd5e1 transparent transparent;
+}
+.chart-bar {
+    -fx-bar-fill: #ea580c;
+    -fx-background-radius: 4px 4px 0 0;
+}
+.chart-bar:hover {
+    -fx-bar-fill: #c2410c;
+}
+.quick-scan-input {
+    -fx-border-color: #3b82f6;
+    -fx-background-color: #f0f7ff;
+    -fx-text-fill: #1e293b;
 }
 
 /* Chat View Styles */
