@@ -27,8 +27,12 @@ import java.time.Duration;
  */
 public class GeminiApiClient {
 
-    private static final String DEFAULT_MODEL = "gemini-1.5-flash";
-    private static final String FALLBACK_MODEL = "gemini-2.0-flash";
+    private static final String[] CANDIDATE_MODELS = {
+            "gemini-3.5-flash-lite",
+            "gemini-3.5-flash",
+            "gemini-2.5-flash",
+            "gemini-1.5-flash"
+    };
     private static final String KEY_FILE = "gemini.key";
     private static final ObjectMapper mapper = new ObjectMapper();
     private static final HttpClient httpClient = HttpClient.newBuilder()
@@ -120,12 +124,13 @@ public class GeminiApiClient {
             return null;
         }
 
-        // Thử model chính DEFAULT_MODEL trước, nếu lỗi thử FALLBACK_MODEL
-        String res = callGeminiEndpoint(DEFAULT_MODEL, apiKey, prompt, systemContext);
-        if (res == null) {
-            res = callGeminiEndpoint(FALLBACK_MODEL, apiKey, prompt, systemContext);
+        for (String model : CANDIDATE_MODELS) {
+            String res = callGeminiEndpoint(model, apiKey, prompt, systemContext);
+            if (res != null && !res.isBlank()) {
+                return res.trim();
+            }
         }
-        return res;
+        return null;
     }
 
     private static String callGeminiEndpoint(String model, String apiKey, String prompt, String systemContext) {
