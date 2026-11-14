@@ -86,16 +86,16 @@ Hệ thống được chia thành 2 phân hệ lớn: **Phân Hệ Lập Trình 
    - Cung cấp các endpoint REST API: `/api/stats`, `/api/books`, `/api/sessions` và `/api/ai-chat?query=...` (hỗ trợ cả GET query string và JSON POST body).
    - Tích hợp thư viện `ZXing` tạo **Mã QR Code** động chứa đường dẫn LAN của Server: Người dùng chỉ cần đưa camera điện thoại quét mã QR là mở được trang Web ngay lập tức.
 
-9. **Trợ Lý AI Chatbot Tra Cứu Sách Thông Minh Qua Socket (SmartLib AI Assistant)**:
-   - Tích hợp bộ máy AI xử lý ngôn ngữ tự nhiên (NLP Intent Classification) phân tích ý định câu hỏi tiếng Việt có/không dấu:
-     - Chào hỏi và hướng dẫn sử dụng thư viện.
-     - Quy chế mượn sách, thời hạn tối đa và công thức tính tiền phạt quá hạn.
-     - Top sách được mượn nhiều nhất trong hệ thống thư viện.
-     - Tra cứu và gợi ý sách theo tên tác giả hoặc thể loại.
-     - Kiểm tra trạng thái tồn kho cụ thể (`availableQuantity` vs `quantity`), báo rõ 🟢 CÒN SÁCH hay 🔴 TẠM HẾT SÁCH (hướng dẫn sử dụng tính năng Đặt trước).
+9. **Trợ Lý AI Chatbot Tra Cứu Sách Thông Minh (SmartLib AI Assistant - Hybrid Architecture)**:
+   - **Kiến trúc AI Kép (Hybrid Dual-Engine)**:
+     - **Google Gemini 1.5 Flash (Chế độ Toàn Năng)**: Khi cấu hình API Key (miễn phí), AI được cấp toàn bộ Context dữ liệu thực tế từ CSDL thư viện để trả lời câu hỏi về sách với độ chính xác 100%, đồng thời có khả năng đàm thoại tự do, trả lời mọi kiến thức mở rộng ngoài sách (lập trình, khoa học, đời sống, học tập,...).
+     - **Local NLP Engine (Chế độ Offline An Toàn)**: Khi không có internet hoặc chưa có key, hệ thống tự động fallback về bộ máy phân tích ý định (Intent Classification) nội bộ, tra cứu trực tiếp MySQL/InMemoryStore mà không cần mạng.
+   - **Cấu hình API Key Tiện Lợi**:
+     - Dán key trực tiếp qua nút **"🔑 Cài đặt Gemini API"** trên giao diện ứng dụng.
+     - Hoặc lưu vào file `gemini.key` tại thư mục gốc / biến môi trường `GEMINI_API_KEY`.
    - **Giao thức Mạng Socket**: Toàn bộ luồng hỏi đáp AI truyền qua TCP Socket (`Request("AI_CHAT_QUERY", prompt)` và `Response.success("AI_RESPONSE", answer)`).
    - **Tích hợp An ninh Mạng**: Gói tin AI được Mini-Wireshark Packet Inspector ghi nhận đầy đủ và tự động mã hóa AES-256 khi kích hoạt chế độ bảo mật chống nghe lén.
-   - **Giao diện Trực quan**: Hỗ trợ mọi vai trò (Đặc biệt là Độc giả - USER), có thanh câu hỏi gợi ý nhanh (Quick Pills), hiệu ứng "AI đang tra cứu CSDL qua Socket..." và bong bóng chat chuyên nghiệp.
+   - **Giao diện Trực quan**: Hỗ trợ mọi vai trò (Đặc biệt là Độc giả - USER), có thanh câu hỏi gợi ý nhanh (Quick Pills), huy hiệu hiển thị trạng thái `✨ Google Gemini 1.5 Flash (Online)` hoặc `🟢 Local NLP Engine (Offline)` và hiệu ứng đang xử lý.
 
 10. **Mô Phỏng Môi Trường Mạng & Độ Trễ Jitter (Network Latency Simulator)**:
    - Thanh trượt điều khiển mô phỏng độ trễ đường truyền từ `0 ms` đến `500 ms` và dao động `Jitter (±20ms)` thời gian thực.
@@ -213,7 +213,8 @@ Hệ thống được chia thành 2 phân hệ lớn: **Phân Hệ Lập Trình 
     │   │       │   └── NetworkSimulationConfig.java # Cấu hình độ trễ mạng giả lập & chống DoS
     │   │       └── service/
     │   │           ├── LibraryService.java      # Xử lý toàn bộ logic nghiệp vụ thư viện
-    │   │           └── AiChatbotService.java    # Xử lý ngôn ngữ tự nhiên (NLP) & tra cứu sách thông minh cho AI
+    │   │           ├── AiChatbotService.java    # Xử lý ngôn ngữ tự nhiên (NLP) & tra cứu sách thông minh cho AI
+    │   │           └── GeminiApiClient.java     # Kết nối Google Gemini 1.5 Flash API (REST v1beta) & quản lý Key
     │   │
     │   └── resources/
     │       ├── css/
@@ -223,7 +224,7 @@ Hệ thống được chia thành 2 phân hệ lớn: **Phân Hệ Lập Trình 
     │           ├── LoginView.fxml               # Màn hình Đăng nhập, Đăng ký Độc giả & Dò tìm Server
     │           └── MainView.fxml                # Màn hình chính Dashboard, Quản lý, Giám sát Mạng, Chatbot AI & Mini-Wireshark
     │
-    └── test/java/com/library/                   # [BỘ KIỂM THỬ TỰ ĐỘNG - 47/47 TESTS PASS]
+    └── test/java/com/library/                   # [BỘ KIỂM THỬ TỰ ĐỘNG - 50/50 TESTS PASS]
         ├── client/
         │   ├── MainViewLoadTest.java            # Kiểm tra tải và ánh xạ FXML an toàn
         │   ├── net/
@@ -241,6 +242,7 @@ Hệ thống được chia thành 2 phân hệ lớn: **Phân Hệ Lập Trình 
             │   └── EmbeddedHttpServerTest.java  # Kiểm tra phản hồi HTTP Server cổng 8080 & REST API (4 tests)
             └── service/
                 ├── AiChatbotServiceTest.java    # 7 bài test NLP AI: Tồn kho, Tác giả, Thể loại, Top sách, Quy chế phạt,...
+                ├── GeminiApiClientTest.java     # 3 bài test Google Gemini API: Key management, Mock handling & Fallback
                 └── LibraryServiceTest.java      # 22 bài test kiểm tra nghiệp vụ mượn, trả, gia hạn, phạt,...
 ```
 
@@ -381,14 +383,15 @@ mvn test
 [INFO] Running com.library.server.net.EmbeddedHttpServerTest (4 tests)
 [INFO] Running com.library.server.SeedDatabaseTest (1 test)
 [INFO] Running com.library.server.service.AiChatbotServiceTest (7 tests)
+[INFO] Running com.library.server.service.GeminiApiClientTest (3 tests)
 [INFO] Running com.library.server.service.LibraryServiceTest (22 tests)
 [INFO] 
 [INFO] Results:
 [INFO] 
-[INFO] Tests run: 47, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 50, Failures: 0, Errors: 0, Skipped: 0
 [INFO] 
 [INFO] ------------------------------------------------------------------------
 [INFO] BUILD SUCCESS
 [INFO] ------------------------------------------------------------------------
 ```
-🎯 **Kết quả**: **47/47 bài test vượt qua thành công (100% Pass)**.
+🎯 **Kết quả**: **50/50 bài test vượt qua thành công (100% Pass)**.

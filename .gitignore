@@ -10,3 +10,8 @@ target/
 .settings/
 .project
 .classpath
+
+# Secret API Keys (Chống lộ API Key lên GitHub)
+gemini.key
+gemeni.key
+*.key

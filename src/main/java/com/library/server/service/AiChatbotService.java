@@ -42,6 +42,19 @@ public class AiChatbotService {
         List<Book> allBooks = InMemoryStore.getAllBooks();
         List<Category> allCategories = InMemoryStore.getAllCategories();
 
+        // 0. Nếu đã cấu hình Gemini API Key -> Gọi Google Gemini 1.5 Flash kèm ngữ cảnh CSDL thực tế
+        if (GeminiApiClient.isConfigured()) {
+            try {
+                String systemContext = buildSystemContext(allBooks, allCategories);
+                String geminiAnswer = GeminiApiClient.generateContent(raw, systemContext);
+                if (geminiAnswer != null && !geminiAnswer.isBlank()) {
+                    return geminiAnswer.trim();
+                }
+            } catch (Exception e) {
+                System.err.println("[AiChatbotService] Gemini API gặp sự cố, tự động chuyển sang Local NLP Engine: " + e.getMessage());
+            }
+        }
+
         // 1. Chào hỏi / Giới thiệu / Trợ giúp
         if (norm.matches("^(chao|xin chao|hello|hi|helo|alo|hai|tro ly|bot|ai).*") ||
             norm.contains("ban la ai") || norm.contains("lam duoc gi") || norm.contains("huong dan") || norm.equals("help")) {
@@ -164,12 +177,53 @@ public class AiChatbotService {
             return sb.toString();
         }
 
-        // 8. Không tìm thấy kết quả phù hợp
+        // 8. Không tìm thấy kết quả phù hợp trong CSDL
         return "🤔 **Rất tiếc, tôi chưa tìm thấy đầu sách nào phù hợp với yêu cầu: '" + raw + "' trong cơ sở dữ liệu thư viện.**\n\n" +
                 "💡 **Gợi ý tra cứu:**\n" +
                 "• Thử tìm theo từ khóa ngắn hơn (Ví dụ: *'Java'*, *'Clean Code'*, *'Python'*, *'AI'*).\n" +
                 "• Hoặc tra cứu theo chủ đề: *'Sách công nghệ thông tin'*, *'Sách văn học'*, *'Sách thiếu nhi'*.\n" +
-                "• Gõ *'Gợi ý sách'* để xem các cuốn đang sẵn sàng cho mượn!";
+                "• Gõ *'Gợi ý sách'* để xem các cuốn đang sẵn sàng cho mượn!\n\n" +
+                "✨ *Mẹo: Nếu bạn muốn hỏi đáp tự do về mọi chủ đề ngoài sách (khoa học, đời sống, lập trình, xã hội,...), hãy nhấn nút '🔑 Cài đặt Gemini API' trên thanh công cụ để kích hoạt mô hình Google Gemini AI nhé!*";
+    }
+
+    public static String buildSystemContext(List<Book> allBooks, List<Category> allCategories) {
+        Map<String, Integer> topBooks = InMemoryStore.getTopBorrowedBooks();
+        StringBuilder sb = new StringBuilder();
+        sb.append("Bạn là SmartLib AI Assistant - Trợ lý Thủ thư Thông minh của Hệ thống Quản lý Thư viện Client-Server (Lập Trình Mạng Java Socket).\n\n");
+        sb.append("=== DỮ LIỆU THỰC TẾ TRONG CƠ SỞ DỮ LIỆU THƯ VIỆN HIỆN TẠI ===\n");
+        sb.append("1. THỂ LOẠI SÁCH: ");
+        if (allCategories != null) {
+            for (int i = 0; i < allCategories.size(); i++) {
+                sb.append(allCategories.get(i).getCategoryName());
+                if (i < allCategories.size() - 1) sb.append(", ");
+            }
+        }
+        sb.append("\n\n2. TOÀN BỘ DANH MỤC SÁCH & TỒN KHO:\n");
+        if (allBooks != null) {
+            for (Book b : allBooks) {
+                sb.append(String.format("• ID #%d | Tiêu đề: '%s' | Tác giả: %s | Thể loại: %s | Năm XB: %d | Tồn kho: %d/%d bản khả dụng\n",
+                        b.getBookId(), b.getTitle(), b.getAuthor(), b.getCategoryName(), b.getPublishYear(),
+                        b.getAvailableQuantity(), b.getQuantity()));
+            }
+        }
+        sb.append("\n3. TOP SÁCH MƯỢN NHIỀU NHẤT: ");
+        if (topBooks != null && !topBooks.isEmpty()) {
+            int r = 1;
+            for (Map.Entry<String, Integer> e : topBooks.entrySet()) {
+                if (r > 5) break;
+                sb.append(String.format("#%d: %s (%d lượt); ", r++, e.getKey(), e.getValue()));
+            }
+        }
+        sb.append("\n\n4. QUY CHẾ MƯỢN TRẢ & PHẠT:\n");
+        sb.append("• Thời hạn mượn: Tối đa 14 ngày/lần mượn.\n");
+        sb.append("• Tự gia hạn online: Độc giả vào tab 'Sách Của Tôi' tự gia hạn thêm +7 ngày (khi chưa quá hạn).\n");
+        sb.append("• Phí phạt trễ hạn: 5.000 VNĐ / ngày trễ.\n");
+        sb.append("• Đặt trước sách (Reservation): Khi sách hết bản khả dụng (0 bản), độc giả có thể gửi yêu cầu Đặt trước để được thông báo ưu tiên khi có người trả về kho.\n\n");
+        sb.append("=== NGUYÊN TẮC TRẢ LỜI ===\n");
+        sb.append("1. Khi hỏi về SÁCH, TÁC GIẢ, THỂ LOẠI, TỒN KHO, QUY CHẾ: Hãy BẮT BUỘC căn cứ vào dữ liệu thực tế ở trên để trả lời chính xác 100%, ghi rõ tình trạng (🟢 Còn sách: X/Y bản khả dụng hoặc 🔴 Tạm hết sách: 0/Y bản, hướng dẫn đặt trước).\n");
+        sb.append("2. Khi hỏi BẤT KỲ CHỦ ĐỀ NÀO KHÁC NGOÀI SÁCH (khoa học, lập trình mạng, đời sống, lịch sử, văn hóa, thơ ca, giải trí,...): Hãy trả lời chi tiết, thông minh, sâu sắc, thân thiện và tự nhiên như một trợ lý AI toàn năng.\n");
+        sb.append("3. Luôn định dạng câu trả lời bằng Markdown đẹp mắt (in đậm, danh sách gạch đầu dòng, icon trực quan).");
+        return sb.toString();
     }
 
     private static void formatBookInfo(StringBuilder sb, Book b) {

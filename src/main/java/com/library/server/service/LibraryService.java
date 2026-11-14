@@ -112,6 +112,10 @@ public class LibraryService {
                     return Response.success("Đã xóa lịch sử trò chuyện", null);
                 case "AI_CHAT_QUERY":
                     return handleAiChatQuery(data);
+                case "GET_AI_STATUS":
+                    return handleGetAiStatus();
+                case "SET_GEMINI_API_KEY":
+                    return handleSetGeminiApiKey(data);
                 default:
                     return Response.error("Hành động không được hỗ trợ: " + action);
             }
@@ -143,6 +147,26 @@ public class LibraryService {
         String query = data != null ? data.toString() : "";
         String answer = AiChatbotService.answerQuery(query);
         return Response.success("AI_RESPONSE", answer);
+    }
+
+    private Response handleGetAiStatus() {
+        Map<String, Object> status = new HashMap<>();
+        boolean isGemini = GeminiApiClient.isConfigured();
+        status.put("isGeminiConfigured", isGemini);
+        status.put("mode", isGemini ? "GEMINI_API" : "LOCAL_NLP");
+        status.put("model", isGemini ? "gemini-1.5-flash" : "Local NLP Engine");
+        return Response.success("AI_STATUS", status);
+    }
+
+    private Response handleSetGeminiApiKey(Object data) {
+        String key = data != null ? data.toString().trim() : "";
+        boolean ok = GeminiApiClient.setApiKey(key);
+        if (ok) {
+            boolean isConfigured = GeminiApiClient.isConfigured();
+            return Response.success(isConfigured ? "Đã lưu và kích hoạt Google Gemini API thành công!" : "Đã xóa API Key, chuyển về Local NLP Mode", isConfigured);
+        } else {
+            return Response.error("Không thể lưu API Key vào file gemini.key");
+        }
     }
 
     private Response handleLogin(Object data) {

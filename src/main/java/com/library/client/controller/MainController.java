@@ -82,6 +82,7 @@ public class MainController {
     @FXML private VBox viewChat;
 
     // AI Chatbot Module
+    @FXML private Label lblAiModelBadge;
     @FXML private ScrollPane scrollAiChat;
     @FXML private VBox vboxAiChatMessages;
     @FXML private Label lblAiTyping;
@@ -824,13 +825,15 @@ public class MainController {
     @FXML
     public void showAiChat() {
         setActiveNav(btnNavAiChat, viewAiChat);
+        updateAiStatusBadge();
         if (vboxAiChatMessages != null && vboxAiChatMessages.getChildren().isEmpty()) {
             addAiMessage("👋 Xin chào! Tôi là **Trợ lý AI Thủ thư Thông minh (SmartLib AI Assistant)**.\n\n"
                     + "Tôi có thể giúp bạn:\n"
                     + "• 🔍 Tra cứu sách theo tiêu đề, tác giả, thể loại hoặc từ khóa.\n"
                     + "• 📦 Kiểm tra số lượng sách còn trong kho & tình trạng mượn/đặt trước.\n"
                     + "• 🏆 Xem Top 5 sách được mượn nhiều nhất trong thư viện.\n"
-                    + "• 📜 Phổ biến quy chế mượn sách, thời hạn và tiền phạt quá hạn.\n\n"
+                    + "• 📜 Phổ biến quy chế mượn sách, thời hạn và tiền phạt quá hạn.\n"
+                    + "• 🌐 Trò chuyện và giải đáp kiến thức tự do khi kích hoạt Google Gemini API.\n\n"
                     + "Hãy chọn một gợi ý nhanh bên trên hoặc nhập câu hỏi của bạn vào khung bên dưới nhé!");
         }
         Platform.runLater(() -> {
@@ -2468,6 +2471,60 @@ public class MainController {
             vboxAiChatMessages.getChildren().clear();
         }
         showAiChat();
+    }
+
+    @FXML
+    public void handleConfigureGeminiKey() {
+        TextInputDialog dialog = new TextInputDialog();
+        dialog.setTitle("Cấu hình Google Gemini API");
+        dialog.setHeaderText("Kích hoạt Trợ lý AI toàn năng (Google Gemini 1.5 Flash)\n"
+                + "• Hỏi đáp mọi chủ đề khoa học, xã hội, lập trình, đời sống...\n"
+                + "• Kết hợp dữ liệu tồn kho thư viện để trả lời tự nhiên nhất\n"
+                + "• Đăng ký API Key miễn phí 100% tại: https://aistudio.google.com/");
+        dialog.setContentText("Dán Google Gemini API Key vào đây (để trống để tắt):");
+
+        Optional<String> result = dialog.showAndWait();
+        if (result.isPresent()) {
+            String key = result.get().trim();
+            new Thread(() -> {
+                try {
+                    Response resp = socketClient.sendRequest(new Request("SET_GEMINI_API_KEY", key));
+                    Platform.runLater(() -> {
+                        if ("SUCCESS".equals(resp.getStatus())) {
+                            showAlert("Cấu hình Gemini AI", resp.getMessage());
+                            updateAiStatusBadge();
+                        } else {
+                            showAlert("Lỗi", resp.getMessage());
+                        }
+                    });
+                } catch (Exception e) {
+                    Platform.runLater(() -> showAlert("Lỗi kết nối", e.getMessage()));
+                }
+            }).start();
+        }
+    }
+
+    private void updateAiStatusBadge() {
+        new Thread(() -> {
+            try {
+                Response resp = socketClient.sendRequest(new Request("GET_AI_STATUS", null));
+                if ("SUCCESS".equals(resp.getStatus()) && resp.getData() instanceof Map) {
+                    Map<?, ?> map = (Map<?, ?>) resp.getData();
+                    boolean isGemini = Boolean.TRUE.equals(map.get("isGeminiConfigured"));
+                    Platform.runLater(() -> {
+                        if (lblAiModelBadge != null) {
+                            if (isGemini) {
+                                lblAiModelBadge.setText("✨ Google Gemini 1.5 Flash (Online)");
+                                lblAiModelBadge.setStyle("-fx-background-color: #ede9fe; -fx-text-fill: #6d28d9; -fx-padding: 4 10; -fx-background-radius: 12; -fx-font-weight: bold; -fx-font-size: 11px;");
+                            } else {
+                                lblAiModelBadge.setText("🟢 Local NLP Engine (Offline)");
+                                lblAiModelBadge.setStyle("-fx-background-color: #dcfce7; -fx-text-fill: #15803d; -fx-padding: 4 10; -fx-background-radius: 12; -fx-font-weight: bold; -fx-font-size: 11px;");
+                            }
+                        }
+                    });
+                }
+            } catch (Exception ignored) {}
+        }).start();
     }
 
     @FXML

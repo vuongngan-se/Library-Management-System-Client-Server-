@@ -726,8 +726,9 @@
                         <children>
                             <Label styleClass="view-title" text="🤖 Trợ Lý AI Thủ Thư Thông Minh (SmartLib AI Assistant)" />
                             <Region HBox.hgrow="ALWAYS" />
-                            <Label text="🟢 Đang kết nối TCP Socket" style="-fx-background-color: #dcfce7; -fx-text-fill: #15803d; -fx-padding: 4 10; -fx-background-radius: 12; -fx-font-weight: bold; -fx-font-size: 11px;" />
-                            <Button onAction="#handleClearAiChat" styleClass="btn-secondary" text="🧹 Xóa hội thoại" />
+                            <Label fx:id="lblAiModelBadge" text="🟢 Local NLP Engine (Offline)" style="-fx-background-color: #dcfce7; -fx-text-fill: #15803d; -fx-padding: 4 10; -fx-background-radius: 12; -fx-font-weight: bold; -fx-font-size: 11px;" />
+                            <Button onAction="#handleConfigureGeminiKey" styleClass="btn-secondary" text="🔑 Cài đặt Gemini API" style="-fx-cursor: hand;" />
+                            <Button onAction="#handleClearAiChat" styleClass="btn-secondary" text="🧹 Xóa hội thoại" style="-fx-cursor: hand;" />
                         </children>
                     </HBox>
 
