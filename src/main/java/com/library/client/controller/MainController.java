@@ -58,6 +58,7 @@ public class MainController {
     @FXML private Button btnNavDashboard;
     @FXML private Button btnNavBooks;
     @FXML private Button btnNavMyBorrowings;
+    @FXML private Button btnNavAiChat;
     @FXML private Button btnNavReaders;
     @FXML private Button btnNavBorrow;
     @FXML private Button btnNavReservations;
@@ -71,6 +72,7 @@ public class MainController {
     @FXML private VBox viewDashboard;
     @FXML private VBox viewBooks;
     @FXML private VBox viewMyBorrowings;
+    @FXML private VBox viewAiChat;
     @FXML private VBox viewReaders;
     @FXML private VBox viewBorrow;
     @FXML private VBox viewReservations;
@@ -78,6 +80,13 @@ public class MainController {
     @FXML private VBox viewNetwork;
     @FXML private VBox viewUsers;
     @FXML private VBox viewChat;
+
+    // AI Chatbot Module
+    @FXML private ScrollPane scrollAiChat;
+    @FXML private VBox vboxAiChatMessages;
+    @FXML private Label lblAiTyping;
+    @FXML private TextField txtAiPrompt;
+    @FXML private Button btnSendAiPrompt;
 
     // My Borrowings Module (Dành riêng cho Độc giả - USER)
     @FXML private TableView<Borrowing> tblMyBorrowings;
@@ -786,6 +795,7 @@ public class MainController {
         btnNavDashboard.getStyleClass().remove("sidebar-btn-active");
         btnNavBooks.getStyleClass().remove("sidebar-btn-active");
         if (btnNavMyBorrowings != null) btnNavMyBorrowings.getStyleClass().remove("sidebar-btn-active");
+        if (btnNavAiChat != null) btnNavAiChat.getStyleClass().remove("sidebar-btn-active");
         btnNavReaders.getStyleClass().remove("sidebar-btn-active");
         btnNavBorrow.getStyleClass().remove("sidebar-btn-active");
         if (btnNavReservations != null) btnNavReservations.getStyleClass().remove("sidebar-btn-active");
@@ -806,8 +816,27 @@ public class MainController {
         viewNetwork.setVisible(false);
         viewUsers.setVisible(false);
         if (viewChat != null) viewChat.setVisible(false);
+        if (viewAiChat != null) viewAiChat.setVisible(false);
 
         activeView.setVisible(true);
+    }
+
+    @FXML
+    public void showAiChat() {
+        setActiveNav(btnNavAiChat, viewAiChat);
+        if (vboxAiChatMessages != null && vboxAiChatMessages.getChildren().isEmpty()) {
+            addAiMessage("👋 Xin chào! Tôi là **Trợ lý AI Thủ thư Thông minh (SmartLib AI Assistant)**.\n\n"
+                    + "Tôi có thể giúp bạn:\n"
+                    + "• 🔍 Tra cứu sách theo tiêu đề, tác giả, thể loại hoặc từ khóa.\n"
+                    + "• 📦 Kiểm tra số lượng sách còn trong kho & tình trạng mượn/đặt trước.\n"
+                    + "• 🏆 Xem Top 5 sách được mượn nhiều nhất trong thư viện.\n"
+                    + "• 📜 Phổ biến quy chế mượn sách, thời hạn và tiền phạt quá hạn.\n\n"
+                    + "Hãy chọn một gợi ý nhanh bên trên hoặc nhập câu hỏi của bạn vào khung bên dưới nhé!");
+        }
+        Platform.runLater(() -> {
+            if (txtAiPrompt != null) txtAiPrompt.requestFocus();
+            if (scrollAiChat != null) scrollAiChat.setVvalue(1.0);
+        });
     }
 
     @FXML
@@ -2386,6 +2415,182 @@ public class MainController {
             } catch (IOException ex) {
                 showAlert("Lỗi lưu file", "Không thể ghi file: " + ex.getMessage());
             }
+        }
+    }
+
+    // ==========================================
+    // AI CHATBOT HANDLERS & HELPERS
+    // ==========================================
+
+    @FXML
+    public void handleQuickAiPrompt1() {
+        if (txtAiPrompt != null) {
+            txtAiPrompt.setText("Thư viện còn sách Clean Code không?");
+            handleSendAiPrompt();
+        }
+    }
+
+    @FXML
+    public void handleQuickAiPrompt2() {
+        if (txtAiPrompt != null) {
+            txtAiPrompt.setText("Tìm các sách về Lập trình Mạng và Java Socket");
+            handleSendAiPrompt();
+        }
+    }
+
+    @FXML
+    public void handleQuickAiPrompt3() {
+        if (txtAiPrompt != null) {
+            txtAiPrompt.setText("Thư viện có sách nào về Trí tuệ nhân tạo (AI) không?");
+            handleSendAiPrompt();
+        }
+    }
+
+    @FXML
+    public void handleQuickAiPrompt4() {
+        if (txtAiPrompt != null) {
+            txtAiPrompt.setText("Top 5 sách được mượn nhiều nhất hiện nay là gì?");
+            handleSendAiPrompt();
+        }
+    }
+
+    @FXML
+    public void handleQuickAiPrompt5() {
+        if (txtAiPrompt != null) {
+            txtAiPrompt.setText("Quy chế mượn sách và tính tiền phạt quá hạn như thế nào?");
+            handleSendAiPrompt();
+        }
+    }
+
+    @FXML
+    public void handleClearAiChat() {
+        if (vboxAiChatMessages != null) {
+            vboxAiChatMessages.getChildren().clear();
+        }
+        showAiChat();
+    }
+
+    @FXML
+    public void handleSendAiPrompt() {
+        if (txtAiPrompt == null) return;
+        String prompt = txtAiPrompt.getText().trim();
+        if (prompt.isEmpty()) return;
+
+        addUserMessage(prompt);
+        txtAiPrompt.clear();
+
+        if (lblAiTyping != null) {
+            lblAiTyping.setVisible(true);
+            lblAiTyping.setManaged(true);
+        }
+        if (btnSendAiPrompt != null) btnSendAiPrompt.setDisable(true);
+
+        new Thread(() -> {
+            try {
+                Request req = new Request("AI_CHAT_QUERY", prompt);
+                Response resp = socketClient.sendRequest(req);
+                String aiAnswer;
+                if ("SUCCESS".equals(resp.getStatus()) && resp.getData() != null) {
+                    aiAnswer = resp.getData().toString();
+                } else {
+                    aiAnswer = "⚠️ Không thể xử lý câu hỏi lúc này: " + (resp != null ? resp.getMessage() : "Mất kết nối");
+                }
+                Platform.runLater(() -> {
+                    if (lblAiTyping != null) {
+                        lblAiTyping.setVisible(false);
+                        lblAiTyping.setManaged(false);
+                    }
+                    if (btnSendAiPrompt != null) btnSendAiPrompt.setDisable(false);
+                    addAiMessage(aiAnswer);
+                });
+            } catch (Exception ex) {
+                Platform.runLater(() -> {
+                    if (lblAiTyping != null) {
+                        lblAiTyping.setVisible(false);
+                        lblAiTyping.setManaged(false);
+                    }
+                    if (btnSendAiPrompt != null) btnSendAiPrompt.setDisable(false);
+                    addAiMessage("❌ Lỗi kết nối Socket đến AI Service: " + ex.getMessage());
+                });
+            }
+        }).start();
+    }
+
+    private void addUserMessage(String text) {
+        if (vboxAiChatMessages == null) return;
+
+        HBox row = new HBox();
+        row.setFillHeight(false);
+        row.setAlignment(Pos.CENTER_RIGHT);
+        row.setSpacing(10);
+
+        VBox bubble = new VBox(4);
+        bubble.getStyleClass().add("chat-bubble-self");
+        bubble.setMaxWidth(620);
+
+        HBox header = new HBox(6);
+        header.setAlignment(Pos.CENTER_RIGHT);
+        String name = (currentUser != null && currentUser.getFullName() != null) ? currentUser.getFullName() : "Bạn";
+        Label lblName = new Label(name);
+        lblName.setStyle("-fx-font-weight: bold; -fx-font-size: 11px; -fx-text-fill: rgba(255,255,255,0.9);");
+        header.getChildren().add(lblName);
+
+        Label lblMsg = new Label(text);
+        lblMsg.setStyle("-fx-text-fill: white; -fx-font-size: 13px;");
+        lblMsg.setWrapText(true);
+
+        bubble.getChildren().addAll(header, lblMsg);
+
+        Label avatar = new Label("👤");
+        avatar.setStyle("-fx-background-color: #2563eb; -fx-text-fill: white; -fx-font-size: 15px; -fx-min-width: 34px; -fx-min-height: 34px; -fx-max-width: 34px; -fx-max-height: 34px; -fx-alignment: center; -fx-background-radius: 17px;");
+
+        row.getChildren().addAll(bubble, avatar);
+        vboxAiChatMessages.getChildren().add(row);
+
+        if (scrollAiChat != null) {
+            Platform.runLater(() -> {
+                scrollAiChat.layout();
+                scrollAiChat.setVvalue(1.0);
+            });
+        }
+    }
+
+    private void addAiMessage(String text) {
+        if (vboxAiChatMessages == null) return;
+
+        HBox row = new HBox();
+        row.setFillHeight(false);
+        row.setAlignment(Pos.CENTER_LEFT);
+        row.setSpacing(10);
+
+        Label avatar = new Label("🤖");
+        avatar.setStyle("-fx-background-color: #4f46e5; -fx-text-fill: white; -fx-font-size: 16px; -fx-min-width: 36px; -fx-min-height: 36px; -fx-max-width: 36px; -fx-max-height: 36px; -fx-alignment: center; -fx-background-radius: 18px;");
+
+        VBox bubble = new VBox(6);
+        bubble.setStyle("-fx-background-color: #ffffff; -fx-background-radius: 14px 14px 14px 2px; -fx-padding: 12px 16px; -fx-border-color: #e2e8f0; -fx-border-radius: 14px 14px 14px 2px; -fx-border-width: 1px; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.04), 4, 0, 0, 1);");
+        bubble.setMaxWidth(680);
+
+        HBox header = new HBox(8);
+        header.setAlignment(Pos.CENTER_LEFT);
+        Label lblName = new Label("SmartLib AI Assistant");
+        lblName.setStyle("-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: #1e1b4b;");
+        Label lblBadge = new Label("TCP Socket NLP");
+        lblBadge.setStyle("-fx-background-color: #e0e7ff; -fx-text-fill: #4338ca; -fx-font-size: 10px; -fx-padding: 2 6; -fx-background-radius: 4; -fx-font-weight: bold;");
+        header.getChildren().addAll(lblName, lblBadge);
+
+        Label lblMsg = new Label(text);
+        lblMsg.setStyle("-fx-text-fill: #1e293b; -fx-font-size: 13px;");
+        lblMsg.setWrapText(true);
+
+        bubble.getChildren().addAll(header, lblMsg);
+        row.getChildren().addAll(avatar, bubble);
+        vboxAiChatMessages.getChildren().add(row);
+
+        if (scrollAiChat != null) {
+            Platform.runLater(() -> {
+                scrollAiChat.layout();
+                scrollAiChat.setVvalue(1.0);
+            });
         }
     }
 

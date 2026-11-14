@@ -42,6 +42,7 @@ public class EmbeddedHttpServer {
             server.createContext("/api/stats", new StatsApiHandler());
             server.createContext("/api/books", new BooksApiHandler());
             server.createContext("/api/sessions", new SessionsApiHandler());
+            server.createContext("/api/ai-chat", new AiChatApiHandler());
 
             server.start();
             running = true;
@@ -183,6 +184,67 @@ public class EmbeddedHttpServer {
         }
     }
 
+    /**
+     * REST API Trợ lý AI Hỏi Sách qua HTTP (/api/ai-chat?query=...)
+     */
+    private static class AiChatApiHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+            exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+            exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type");
+            exchange.getResponseHeaders().add("Content-Type", "application/json; charset=UTF-8");
+
+            if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
+                sendResponse(exchange, 204, "application/json; charset=UTF-8", "");
+                return;
+            }
+
+            String query = "";
+            if ("GET".equalsIgnoreCase(exchange.getRequestMethod())) {
+                String rawQuery = exchange.getRequestURI().getQuery();
+                if (rawQuery != null && rawQuery.contains("query=")) {
+                    for (String param : rawQuery.split("&")) {
+                        String[] pair = param.split("=");
+                        if (pair.length == 2 && "query".equals(pair[0])) {
+                            try {
+                                query = java.net.URLDecoder.decode(pair[1], StandardCharsets.UTF_8).trim();
+                            } catch (Exception ignored) {}
+                        }
+                    }
+                }
+            } else if ("POST".equalsIgnoreCase(exchange.getRequestMethod())) {
+                try {
+                    String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8).trim();
+                    if (body.startsWith("{")) {
+                        Map<?, ?> map = mapper.readValue(body, Map.class);
+                        Object qObj = map.get("query");
+                        if (qObj != null) query = qObj.toString().trim();
+                    } else {
+                        query = body;
+                    }
+                } catch (Exception ignored) {}
+            }
+
+            if (query.isEmpty()) {
+                Map<String, Object> err = new HashMap<>();
+                err.put("status", "ERROR");
+                err.put("message", "Vui lòng truyền tham số 'query' qua URL query string hoặc JSON POST body.");
+                sendResponse(exchange, 400, "application/json; charset=UTF-8", mapper.writeValueAsString(err));
+                return;
+            }
+
+            String answer = com.library.server.service.AiChatbotService.answerQuery(query);
+            Map<String, Object> result = new HashMap<>();
+            result.put("status", "SUCCESS");
+            result.put("query", query);
+            result.put("answer", answer);
+
+            String json = mapper.writeValueAsString(result);
+            sendResponse(exchange, 200, "application/json; charset=UTF-8", json);
+        }
+    }
+
     private static void sendResponse(HttpExchange exchange, int statusCode, String contentType, String body) throws IOException {
         byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
         exchange.getResponseHeaders().set("Content-Type", contentType);
@@ -244,6 +306,15 @@ public class EmbeddedHttpServer {
                 "      <div class=\"metric-card\"><div class=\"metric-lbl\">Độc Giả Đăng Ký</div><div class=\"metric-val\" id=\"mReaders\">--</div></div>\n" +
                 "      <div class=\"metric-card\"><div class=\"metric-lbl\">Socket Đang Online</div><div class=\"metric-val\" id=\"mSockets\">--</div></div>\n" +
                 "    </div>\n" +
+                "    <div class=\"ai-box\" style=\"background: white; border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border-left: 4px solid #6366f1;\">\n" +
+                "      <div style=\"font-size: 15px; font-weight: bold; color: #312e81; margin-bottom: 4px;\">🤖 Trợ Lý AI Hỏi Sách Thông Minh</div>\n" +
+                "      <div style=\"font-size: 12px; color: #64748b; margin-bottom: 10px;\">Hỏi AI về tình trạng sách còn/hết, tác giả, top sách mượn hoặc quy chế thư viện:</div>\n" +
+                "      <div style=\"display: flex; gap: 8px;\">\n" +
+                "        <input type=\"text\" id=\"txtAiWeb\" placeholder=\"VD: Thư viện còn sách Clean Code không?...\" onkeydown=\"if(event.key==='Enter') askAiWeb()\" style=\"flex: 1; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; outline: none;\">\n" +
+                "        <button onclick=\"askAiWeb()\" style=\"background: #4f46e5; color: white; border: none; border-radius: 8px; padding: 10px 14px; font-weight: bold; cursor: pointer; font-size: 13px;\">Hỏi AI 🚀</button>\n" +
+                "      </div>\n" +
+                "      <div id=\"aiWebResult\" style=\"margin-top: 10px; font-size: 13px; color: #1e293b; background: #f8fafc; border-radius: 8px; padding: 10px 14px; display: none; white-space: pre-line; border: 1px solid #e2e8f0; line-height: 1.5;\"></div>\n" +
+                "    </div>\n" +
                 "    <div class=\"search-box\">\n" +
                 "      <input type=\"text\" id=\"txtSearch\" placeholder=\"🔍 Nhập tên sách, tác giả hoặc thể loại...\" oninput=\"filterBooks()\">\n" +
                 "    </div>\n" +
@@ -299,6 +370,21 @@ public class EmbeddedHttpServer {
                 "        (b.categoryName && b.categoryName.toLowerCase().includes(q))\n" +
                 "      );\n" +
                 "      renderBooks(filtered);\n" +
+                "    }\n" +
+                "    async function askAiWeb() {\n" +
+                "      const inp = document.getElementById('txtAiWeb');\n" +
+                "      const q = inp.value.trim();\n" +
+                "      if(!q) return;\n" +
+                "      const resEl = document.getElementById('aiWebResult');\n" +
+                "      resEl.style.display = 'block';\n" +
+                "      resEl.innerText = '🤖 AI đang tra cứu cơ sở dữ liệu qua REST API...';\n" +
+                "      try {\n" +
+                "        const res = await fetch('/api/ai-chat?query=' + encodeURIComponent(q));\n" +
+                "        const data = await res.json();\n" +
+                "        resEl.innerText = data.answer || 'Không nhận được câu trả lời từ AI.';\n" +
+                "      } catch(e) {\n" +
+                "        resEl.innerText = 'Lỗi kết nối tới AI API: ' + e;\n" +
+                "      }\n" +
                 "    }\n" +
                 "    loadStats();\n" +
                 "    loadBooks();\n" +

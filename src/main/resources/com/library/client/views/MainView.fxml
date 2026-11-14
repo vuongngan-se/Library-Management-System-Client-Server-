@@ -50,6 +50,7 @@
                 <Button fx:id="btnNavDashboard" maxWidth="1.7976931348623157E308" onAction="#showDashboard" styleClass="sidebar-btn, sidebar-btn-active" text="📊 Tổng quan &amp; Báo cáo" />
                 <Button fx:id="btnNavBooks" maxWidth="1.7976931348623157E308" onAction="#showBooks" styleClass="sidebar-btn" text="📖 Quản lý Sách" />
                 <Button fx:id="btnNavMyBorrowings" maxWidth="1.7976931348623157E308" onAction="#showMyBorrowings" styleClass="sidebar-btn" text="📚 Sách Của Tôi" />
+                <Button fx:id="btnNavAiChat" maxWidth="1.7976931348623157E308" onAction="#showAiChat" styleClass="sidebar-btn" text="🤖 Trợ lý AI Hỏi Sách" />
                 <Button fx:id="btnNavReaders" maxWidth="1.7976931348623157E308" onAction="#showReaders" styleClass="sidebar-btn" text="🎴 Quản lý Độc giả" />
                 <Button fx:id="btnNavBorrow" maxWidth="1.7976931348623157E308" onAction="#showBorrow" styleClass="sidebar-btn" text="🔄 Mượn &amp; Trả sách" />
                 <Button fx:id="btnNavReservations" maxWidth="1.7976931348623157E308" onAction="#showReservations" styleClass="sidebar-btn" text="📌 Đặt trước Sách" />
@@ -715,6 +716,55 @@
                             <Label style="-fx-font-size: 12px; -fx-text-fill: #34495e;" text="Chọn một phiếu mượn và nhấn 'Gia hạn thêm 7 ngày' để kéo dài thời gian mượn trực tiếp mà không cần đến quầy thư viện." />
                         </children>
                     </HBox>
+                </children>
+            </VBox>
+
+            <!-- SmartLib AI Chatbot View -->
+            <VBox fx:id="viewAiChat" spacing="15.0" visible="false">
+                <children>
+                    <HBox alignment="CENTER_LEFT" spacing="10.0">
+                        <children>
+                            <Label styleClass="view-title" text="🤖 Trợ Lý AI Thủ Thư Thông Minh (SmartLib AI Assistant)" />
+                            <Region HBox.hgrow="ALWAYS" />
+                            <Label text="🟢 Đang kết nối TCP Socket" style="-fx-background-color: #dcfce7; -fx-text-fill: #15803d; -fx-padding: 4 10; -fx-background-radius: 12; -fx-font-weight: bold; -fx-font-size: 11px;" />
+                            <Button onAction="#handleClearAiChat" styleClass="btn-secondary" text="🧹 Xóa hội thoại" />
+                        </children>
+                    </HBox>
+
+                    <!-- Quick Suggestions Bar -->
+                    <HBox alignment="CENTER_LEFT" spacing="8.0" style="-fx-background-color: #f8fafc; -fx-padding: 8 12; -fx-background-radius: 8; -fx-border-color: #e2e8f0; -fx-border-radius: 8;">
+                        <children>
+                            <Label text="Gợi ý nhanh:" style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #64748b;" />
+                            <Button onAction="#handleQuickAiPrompt1" text="🔍 Sách Clean Code" style="-fx-font-size: 11px; -fx-padding: 4 10; -fx-background-radius: 12; -fx-background-color: #e0e7ff; -fx-text-fill: #4338ca; -fx-cursor: hand;" />
+                            <Button onAction="#handleQuickAiPrompt2" text="☕ Sách Lập trình Java Socket" style="-fx-font-size: 11px; -fx-padding: 4 10; -fx-background-radius: 12; -fx-background-color: #fef3c7; -fx-text-fill: #b45309; -fx-cursor: hand;" />
+                            <Button onAction="#handleQuickAiPrompt3" text="🧠 Trí tuệ nhân tạo (AI)" style="-fx-font-size: 11px; -fx-padding: 4 10; -fx-background-radius: 12; -fx-background-color: #fce7f3; -fx-text-fill: #be185d; -fx-cursor: hand;" />
+                            <Button onAction="#handleQuickAiPrompt4" text="🏆 Top sách mượn nhiều" style="-fx-font-size: 11px; -fx-padding: 4 10; -fx-background-radius: 12; -fx-background-color: #d1fae5; -fx-text-fill: #065f46; -fx-cursor: hand;" />
+                            <Button onAction="#handleQuickAiPrompt5" text="📜 Quy chế mượn &amp; phạt" style="-fx-font-size: 11px; -fx-padding: 4 10; -fx-background-radius: 12; -fx-background-color: #f3f4f6; -fx-text-fill: #374151; -fx-cursor: hand;" />
+                        </children>
+                    </HBox>
+
+                    <!-- Main Chat Container -->
+                    <VBox spacing="10.0" styleClass="card" VBox.vgrow="ALWAYS">
+                        <children>
+                            <ScrollPane fx:id="scrollAiChat" fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED" VBox.vgrow="ALWAYS" styleClass="content-scrollpane">
+                                <content>
+                                    <VBox fx:id="vboxAiChatMessages" spacing="12.0" style="-fx-padding: 12;" />
+                                </content>
+                            </ScrollPane>
+
+                            <!-- AI Status Loading Label -->
+                            <Label fx:id="lblAiTyping" text="🤖 AI đang tra cứu Cơ sở dữ liệu qua Socket..." visible="false" managed="false"
+                                   style="-fx-font-size: 12px; -fx-font-style: italic; -fx-text-fill: #3b82f6; -fx-padding: 0 0 4 6;" />
+
+                            <!-- Input Bar -->
+                            <HBox alignment="CENTER" spacing="10.0" style="-fx-padding: 10 0 0 0; -fx-border-color: #edf2f7; -fx-border-width: 1 0 0 0;">
+                                <children>
+                                    <TextField fx:id="txtAiPrompt" onAction="#handleSendAiPrompt" promptText="Hỏi bất kỳ điều gì về sách trong thư viện... (Ví dụ: 'Thư viện có sách nào của tác giả Robert C. Martin không?')" HBox.hgrow="ALWAYS" style="-fx-font-size: 13px; -fx-pref-height: 42px;" />
+                                    <Button fx:id="btnSendAiPrompt" onAction="#handleSendAiPrompt" styleClass="btn-primary" text="Hỏi AI 🚀" style="-fx-pref-height: 42px; -fx-font-weight: bold; -fx-pref-width: 105px; -fx-cursor: hand;" />
+                                </children>
+                            </HBox>
+                        </children>
+                    </VBox>
                 </children>
             </VBox>
         </StackPane>

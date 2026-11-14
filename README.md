@@ -80,25 +80,37 @@ Hệ thống được chia thành 2 phân hệ lớn: **Phân Hệ Lập Trình 
        - Khi *Tắt (Plaintext)*: Mini-Wireshark soi thấy chuỗi JSON rõ ràng.
        - Khi *Bật (Encrypted)*: Mọi gói tin đổi thành `🔒 ENCRYPTED`, payload trở thành chuỗi Ciphertext vô nghĩa, ngăn chặn hoàn toàn việc bắt trộm mật khẩu và dữ liệu bằng Wireshark trên mạng LAN.
 
-7. **Cổng Web Di Động Tích Hợp (Embedded HTTP Server - Cổng 8080) & Mã QR**:
+8. **Cổng Web Di Động Tích Hợp (Embedded HTTP Server - Cổng 8080), REST API & Mã QR**:
    - Máy chủ tích hợp sẵn Web Server nội bộ (sử dụng `com.sun.net.httpserver.HttpServer`) chạy độc lập trên cổng `8080`.
-   - Cung cấp trang Web Responsive HTML5/CSS3 tương thích hoàn hảo với điện thoại Smartphone (tra cứu danh mục sách, kiểm tra tồn kho khả dụng và số socket đang online) mà **không cần cài đặt JavaFX Client**.
+   - Cung cấp trang Web Responsive HTML5/CSS3 tương thích hoàn hảo với điện thoại Smartphone (tra cứu danh mục sách, kiểm tra tồn kho khả dụng, hỏi Trợ lý AI và số socket đang online) mà **không cần cài đặt JavaFX Client**.
+   - Cung cấp các endpoint REST API: `/api/stats`, `/api/books`, `/api/sessions` và `/api/ai-chat?query=...` (hỗ trợ cả GET query string và JSON POST body).
    - Tích hợp thư viện `ZXing` tạo **Mã QR Code** động chứa đường dẫn LAN của Server: Người dùng chỉ cần đưa camera điện thoại quét mã QR là mở được trang Web ngay lập tức.
 
-8. **Mô Phỏng Môi Trường Mạng & Độ Trễ Jitter (Network Latency Simulator)**:
+9. **Trợ Lý AI Chatbot Tra Cứu Sách Thông Minh Qua Socket (SmartLib AI Assistant)**:
+   - Tích hợp bộ máy AI xử lý ngôn ngữ tự nhiên (NLP Intent Classification) phân tích ý định câu hỏi tiếng Việt có/không dấu:
+     - Chào hỏi và hướng dẫn sử dụng thư viện.
+     - Quy chế mượn sách, thời hạn tối đa và công thức tính tiền phạt quá hạn.
+     - Top sách được mượn nhiều nhất trong hệ thống thư viện.
+     - Tra cứu và gợi ý sách theo tên tác giả hoặc thể loại.
+     - Kiểm tra trạng thái tồn kho cụ thể (`availableQuantity` vs `quantity`), báo rõ 🟢 CÒN SÁCH hay 🔴 TẠM HẾT SÁCH (hướng dẫn sử dụng tính năng Đặt trước).
+   - **Giao thức Mạng Socket**: Toàn bộ luồng hỏi đáp AI truyền qua TCP Socket (`Request("AI_CHAT_QUERY", prompt)` và `Response.success("AI_RESPONSE", answer)`).
+   - **Tích hợp An ninh Mạng**: Gói tin AI được Mini-Wireshark Packet Inspector ghi nhận đầy đủ và tự động mã hóa AES-256 khi kích hoạt chế độ bảo mật chống nghe lén.
+   - **Giao diện Trực quan**: Hỗ trợ mọi vai trò (Đặc biệt là Độc giả - USER), có thanh câu hỏi gợi ý nhanh (Quick Pills), hiệu ứng "AI đang tra cứu CSDL qua Socket..." và bong bóng chat chuyên nghiệp.
+
+10. **Mô Phỏng Môi Trường Mạng & Độ Trễ Jitter (Network Latency Simulator)**:
    - Thanh trượt điều khiển mô phỏng độ trễ đường truyền từ `0 ms` đến `500 ms` và dao động `Jitter (±20ms)` thời gian thực.
    - Thể hiện trực quan sự thay đổi của mạng LAN thực tế và tác động tức thì lên huy hiệu RTT của các máy Client đang kết nối.
 
-9. **Cơ Chế Phòng Thủ DoS & Giới Hạn Tần Suất Yêu Cầu (Rate Limiting Defense)**:
+11. **Cơ Chế Phòng Thủ DoS & Giới Hạn Tần Suất Yêu Cầu (Rate Limiting Defense)**:
    - Tự động kiểm soát tần suất gửi yêu cầu của từng IP/Session trong cửa sổ thời gian 1 giây.
    - Giới hạn an toàn: Tối đa **15 requests/giây**. Nếu Client spam yêu cầu vượt ngưỡng (Request Flooding), Server sẽ tự động chặn và trả về lỗi `429 Too Many Requests` an toàn.
    - Đi kèm nút **"⚡ Test bắn DoS thử"** gửi 25 yêu cầu dồn dập trong 200ms để minh họa trực quan tính năng phòng vệ trước giảng viên.
 
-10. **Bảng Theo Dõi & Quản Lý Phiên Socket Trực Tiếp (Active TCP Sessions Table)**:
+12. **Bảng Theo Dõi & Quản Lý Phiên Socket Trực Tiếp (Active TCP Sessions Table)**:
     - Bảng giám sát chi tiết danh sách tất cả các Socket Client đang kết nối: Session ID, Địa chỉ IP, Cổng Port, Tên đăng nhập, Vai trò, Thời gian kết nối, Tổng số Request đã thực hiện, Lệnh mạng gần nhất.
     - Tính năng **"⛔ Ngắt kết nối Client (Kick Session)"**: Cho phép Quản trị viên đóng Socket của một Client bất kỳ từ xa.
 
-11. **Kênh Chat Nội Bộ & Phát Sóng Sự Kiện Đa Luồng (Live Event Broadcast)**:
+13. **Kênh Chat Nội Bộ & Phát Sóng Sự Kiện Đa Luồng (Live Event Broadcast)**:
     - Kênh giao tiếp thời gian thực dành cho nhân viên thủ thư và quản trị viên qua Socket riêng (`ChatClientListener`).
     - Hệ thống tự động phát sóng (Broadcast) các sự kiện kho sách theo thời gian thực tới tất cả các Client đang mở (Sự kiện mượn sách mới, trả sách, hoàn tất đặt trước, thông báo quá hạn,...).
 
@@ -200,7 +212,8 @@ Hệ thống được chia thành 2 phân hệ lớn: **Phân Hệ Lập Trình 
     │   │       │   ├── ChatManager.java         # Quản lý phòng chat và phát sóng sự kiện đa luồng
     │   │       │   └── NetworkSimulationConfig.java # Cấu hình độ trễ mạng giả lập & chống DoS
     │   │       └── service/
-    │   │           └── LibraryService.java      # Xử lý toàn bộ logic nghiệp vụ thư viện
+    │   │           ├── LibraryService.java      # Xử lý toàn bộ logic nghiệp vụ thư viện
+    │   │           └── AiChatbotService.java    # Xử lý ngôn ngữ tự nhiên (NLP) & tra cứu sách thông minh cho AI
     │   │
     │   └── resources/
     │       ├── css/
@@ -208,9 +221,9 @@ Hệ thống được chia thành 2 phân hệ lớn: **Phân Hệ Lập Trình 
     │       │   └── style-dark.css               # Bộ giao diện Dark Palette (Chế độ Tối)
     │       └── com/library/client/views/
     │           ├── LoginView.fxml               # Màn hình Đăng nhập, Đăng ký Độc giả & Dò tìm Server
-    │           └── MainView.fxml                # Màn hình chính Dashboard, Quản lý, Giám sát Mạng & Mini-Wireshark
+    │           └── MainView.fxml                # Màn hình chính Dashboard, Quản lý, Giám sát Mạng, Chatbot AI & Mini-Wireshark
     │
-    └── test/java/com/library/                   # [BỘ KIỂM THỬ TỰ ĐỘNG - 39/39 TESTS PASS]
+    └── test/java/com/library/                   # [BỘ KIỂM THỬ TỰ ĐỘNG - 47/47 TESTS PASS]
         ├── client/
         │   ├── MainViewLoadTest.java            # Kiểm tra tải và ánh xạ FXML an toàn
         │   ├── net/
@@ -225,8 +238,9 @@ Hệ thống được chia thành 2 phân hệ lớn: **Phân Hệ Lập Trình 
             ├── SeedDatabaseTest.java            # Kiểm tra nạp CSDL và cơ chế In-Memory fallback
             ├── net/
             │   ├── DiscoveryNetTest.java        # Kiểm tra mạng UDP Discovery tự động
-            │   └── EmbeddedHttpServerTest.java  # Kiểm tra phản hồi HTTP Server cổng 8080
+            │   └── EmbeddedHttpServerTest.java  # Kiểm tra phản hồi HTTP Server cổng 8080 & REST API (4 tests)
             └── service/
+                ├── AiChatbotServiceTest.java    # 7 bài test NLP AI: Tồn kho, Tác giả, Thể loại, Top sách, Quy chế phạt,...
                 └── LibraryServiceTest.java      # 22 bài test kiểm tra nghiệp vụ mượn, trả, gia hạn, phạt,...
 ```
 
@@ -329,11 +343,25 @@ Dưới đây là 7 kịch bản demo mẫu thể hiện trọn vẹn toàn bộ
 * **Thao tác**: Trên tab **"Mạng"** của tài khoản Admin, xem bảng **Active TCP Sockets**. Chọn một phiên làm việc của máy Client khác và nhấn **"⛔ Ngắt kết nối Client"**.
 * **Hiện tượng**: Socket của máy Client đó bị Server đóng an toàn lập tức, danh sách phiên tự động cập nhật giảm đi 1, chứng minh khả năng quản trị kết nối tập trung của máy chủ.
 
+### Kịch bản 8: Trợ Lý AI Chatbot Tra Cứu Sách Thông Minh Qua Socket (NLP Intent Engine)
+* **Thao tác**:
+  1. Đăng nhập với bất kỳ tài khoản nào (kể cả Độc giả `USER`), chọn tab **"🤖 Trợ lý AI Hỏi Sách"**.
+  2. Bấm thử các nút gợi ý nhanh:
+     - *"🔍 Sách Clean Code"*: AI phản hồi chi tiết sách, số lượng còn trong kho và tác giả Robert C. Martin.
+     - *"🏆 Top sách mượn nhiều"*: AI liệt kê bảng xếp hạng 5 cuốn sách có lượt mượn cao nhất.
+     - *"📜 Quy chế mượn & phạt"*: AI trình bày quy định mượn tối đa 3 cuốn/14 ngày, phí phạt 5.000 VNĐ/ngày trễ.
+  3. Nhập câu hỏi tự do bằng ngôn ngữ tự nhiên: *"Thư viện có sách nào về Lập trình Mạng không?"* hoặc *"Cuốn Web Spring Boot còn sách không?"*.
+* **Hiện tượng**: AI phân tích intent, truy vấn trực tiếp CSDL/InMemoryStore qua Socket TCP và phản hồi câu trả lời trực quan kèm tình trạng 🟢 CÒN SÁCH hoặc 🔴 TẠM HẾT SÁCH (kèm hướng dẫn Đặt trước).
+* **Điểm nhấn môn Mạng**:
+  - Mở tab **"Mạng"**, trên bảng **Mini-Wireshark** sẽ thấy ngay gói tin TCP `AI_CHAT_QUERY` và phản hồi `AI_RESPONSE`.
+  - Khi bật **"Mã hóa AES-256"**, toàn bộ câu hỏi và câu trả lời AI đều được mã hóa đối xứng an toàn, ngăn chặn việc theo dõi dữ liệu hỏi đáp trên đường truyền LAN!
+  - Trên điện thoại quét mã QR mở **Mobile Web Portal (Cổng 8080)**, người dùng cũng có thể nhập câu hỏi vào ô Trợ lý AI và nhận phản hồi tức thì qua REST API `/api/ai-chat`.
+
 ---
 
 ## 🏆 6. Kết Quả Kiểm Thử Tự Động (Automated Test Suite)
 
-Dự án được xây dựng với bộ kiểm thử tự động toàn diện bằng **JUnit 5**, bao phủ toàn bộ các tầng Mạng, Mật mã, Giao thức, Web Server và Nghiệp vụ CSDL:
+Dự án được xây dựng với bộ kiểm thử tự động toàn diện bằng **JUnit 5**, bao phủ toàn bộ các tầng Mạng, Mật mã, Giao thức, Web Server, NLP Chatbot AI và Nghiệp vụ CSDL:
 
 ```bash
 mvn test
@@ -350,16 +378,17 @@ mvn test
 [INFO] Running com.library.common.protocol.CryptoUtilsTest (3 tests)
 [INFO] Running com.library.common.protocol.NetworkUtilsTest (2 tests)
 [INFO] Running com.library.server.net.DiscoveryNetTest (1 test)
-[INFO] Running com.library.server.net.EmbeddedHttpServerTest (3 tests)
+[INFO] Running com.library.server.net.EmbeddedHttpServerTest (4 tests)
 [INFO] Running com.library.server.SeedDatabaseTest (1 test)
+[INFO] Running com.library.server.service.AiChatbotServiceTest (7 tests)
 [INFO] Running com.library.server.service.LibraryServiceTest (22 tests)
 [INFO] 
 [INFO] Results:
 [INFO] 
-[INFO] Tests run: 39, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 47, Failures: 0, Errors: 0, Skipped: 0
 [INFO] 
 [INFO] ------------------------------------------------------------------------
 [INFO] BUILD SUCCESS
 [INFO] ------------------------------------------------------------------------
 ```
-🎯 **Kết quả**: **39/39 bài test vượt qua thành công (100% Pass)**.
+🎯 **Kết quả**: **47/47 bài test vượt qua thành công (100% Pass)**.

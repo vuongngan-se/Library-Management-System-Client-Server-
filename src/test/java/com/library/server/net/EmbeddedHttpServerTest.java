@@ -73,5 +73,19 @@ public class EmbeddedHttpServerTest {
         assertEquals(200, response.statusCode());
         assertTrue(response.body().contains("Java"), "API Books phải lọc ra sách chứa từ khóa Java");
     }
+
+    @Test
+    void testApiAiChatEndpoint() throws Exception {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:8080/api/ai-chat?query=Clean%20Code"))
+                .GET()
+                .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        assertEquals(200, response.statusCode());
+        assertTrue(response.body().contains("SUCCESS"), "API AI Chat phải trả về SUCCESS");
+        assertTrue(response.body().contains("Clean Code"), "API AI Chat phải nhắc tới sách Clean Code");
+    }
 }
 

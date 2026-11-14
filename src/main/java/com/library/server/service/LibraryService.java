@@ -110,6 +110,8 @@ public class LibraryService {
                 case "CLEAR_CHAT_HISTORY":
                     ChatManager.clearHistory();
                     return Response.success("Đã xóa lịch sử trò chuyện", null);
+                case "AI_CHAT_QUERY":
+                    return handleAiChatQuery(data);
                 default:
                     return Response.error("Hành động không được hỗ trợ: " + action);
             }
@@ -135,6 +137,12 @@ public class LibraryService {
         pongData.put("clientTime", clientTime);
         pongData.put("serverTime", System.currentTimeMillis());
         return Response.success("PONG", pongData);
+    }
+
+    private Response handleAiChatQuery(Object data) {
+        String query = data != null ? data.toString() : "";
+        String answer = AiChatbotService.answerQuery(query);
+        return Response.success("AI_RESPONSE", answer);
     }
 
     private Response handleLogin(Object data) {
